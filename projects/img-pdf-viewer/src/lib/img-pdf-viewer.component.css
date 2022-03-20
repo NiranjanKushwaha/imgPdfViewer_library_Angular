@@ -1,0 +1,16 @@
+.action_btns button {
+  margin: 0.3rem;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.current_zoom_level {
+  width: 3.5rem !important;
+  height: 2.5rem;
+  text-align: center;
+}
+
+.img_container {
+  overflow: auto;
+  /* height: calc(88vh - 1rem); */
+}

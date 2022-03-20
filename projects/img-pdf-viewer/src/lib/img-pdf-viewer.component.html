@@ -1,0 +1,102 @@
+<div
+  *ngIf="documentURL; else noDocumentFound"
+  [ngStyle]="{ width: docPreviewConfig.docScreenWidth }"
+>
+  <div class="action_btns d-flex justify-content-center">
+    <button
+      class="btn-outline-info btn download_btn"
+      (click)="downloadFile()"
+      *ngIf="docPreviewConfig.download"
+      [disabled]="isArchieved"
+    >
+      <i class="fa fa-download" aria-hidden="true"></i>
+    </button>
+    <button
+      class="zoomIn btn btn-outline-info"
+      (click)="upDateZoom('increment')"
+      *ngIf="docPreviewConfig.zoomIn"
+      [disabled]="isArchieved"
+    >
+      <i class="fa fa-search-plus" aria-hidden="true"></i>
+    </button>
+
+    <button
+      class="current_zoom_level btn btn-outline-info"
+      *ngIf="docPreviewConfig.pageIndicator"
+      [disabled]="isArchieved"
+    >
+      <span> {{ zoom_in }} </span>
+    </button>
+    <button
+      class="zoomOut btn btn-outline-info"
+      (click)="upDateZoom('decrement')"
+      *ngIf="docPreviewConfig.zoomOut"
+      [disabled]="isArchieved"
+    >
+      <i class="fa fa-search-minus" aria-hidden="true"></i>
+    </button>
+    <button
+      class="rotate btn btn-outline-info"
+      (click)="rotateDoc()"
+      *ngIf="docPreviewConfig.rotate"
+      [disabled]="isArchieved"
+    >
+      <i class="fa fa-refresh" aria-hidden="true"></i>
+    </button>
+    <button
+      class="btn-outline-info btn fullScreen"
+      (click)="viewInFullScreen()"
+      *ngIf="docPreviewConfig.openModal"
+      [disabled]="isArchieved"
+    >
+      <i class="fa fa-arrows-alt" aria-hidden="true"></i>
+    </button>
+    <button
+      class="btn close_btn btn-outline-info"
+      *ngIf="docPreviewConfig.close"
+      (click)="closeModal()"
+      [disabled]="isArchieved"
+    >
+      <i class="fa fa-times" aria-hidden="true"></i>
+    </button>
+  </div>
+  <ng-container *ngIf="documentType && !isArchieved; else notSupported">
+    <div class="pdf_type" *ngIf="documentType === pdfType">
+      <pdf-viewer
+        [src]="documentURL"
+        [rotation]="rotation"
+        [original-size]="false"
+        [show-all]="true"
+        [fit-to-page]="true"
+        [zoom]="zoom_in"
+        [zoom-scale]="'page-width'"
+        [stick-to-page]="false"
+        [autoresize]="true"
+        style="width: 100%; height: 600px"
+      ></pdf-viewer>
+    </div>
+
+    <div class="img_type" *ngIf="documentType === imageType">
+      <div class="text-center img_container">
+        <img
+          [src]="documentURL"
+          alt="fileName"
+          id="rotate_pic"
+          #view_img
+          style="width: 100%"
+        />
+      </div>
+    </div>
+  </ng-container>
+  <ng-template #notSupported>
+    <div class="text-center mt-5">
+      <p class="text-primary">File Type Not Supported</p>
+    </div>
+  </ng-template>
+</div>
+
+<ng-template #noDocumentFound>
+  <div class="text-center mt-5">
+    <p class="text-primary">No document found to preview</p>
+  </div>
+</ng-template>

@@ -5,8 +5,14 @@
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "strict": false,
     "noImplicitOverride": true,
+    "paths": {
+      "imgPdf-viewer": [
+        "dist/img-pdf-viewer/img-pdf-viewer",
+        "dist/img-pdf-viewer"
+      ]
+    },
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
