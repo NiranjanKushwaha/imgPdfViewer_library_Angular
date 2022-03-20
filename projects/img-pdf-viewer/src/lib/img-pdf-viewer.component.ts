@@ -12,7 +12,7 @@ import { DocPreviewConfig } from './docConfig';
 import { ImgPdfViewerService } from './img-pdf-viewer.service';
 
 @Component({
-  selector: 'lib-imgPdf-viewer',
+  selector: 'ngx-imgPdf-viewer',
   templateUrl: './img-pdf-viewer.component.html',
   styleUrls: ['./img-pdf-viewer.component.css'],
 })
