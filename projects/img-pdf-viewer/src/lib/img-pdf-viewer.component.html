@@ -2,7 +2,7 @@
   *ngIf="documentURL; else noDocumentFound"
   [ngStyle]="{ width: docPreviewConfig.docScreenWidth }"
 >
-  <div class="action_btns d-flex justify-content-center">
+  <div class="action_btns">
     <button
       class="btn-outline-info btn download_btn"
       (click)="downloadFile()"

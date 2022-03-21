@@ -14,3 +14,11 @@
   overflow: auto;
   /* height: calc(88vh - 1rem); */
 }
+
+.action_btns {
+  display: flex;
+  justify-content: center;
+  /* position: fixed;
+  background: white;
+  width: 100%; */
+}

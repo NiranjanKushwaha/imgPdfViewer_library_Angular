@@ -1,24 +1,85 @@
-# ImgPdfViewer
+# Description
 
-This library was generated with [Angular CLI](https://github.com/angular/angular-cli) version 13.3.0.
+Angular Image & PDF Viewer
 
-## Code scaffolding
+## Installation
 
-Run `ng generate component component-name --project imgPdf-viewer` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module --project imgPdf-viewer`.
-> Note: Don't forget to add `--project imgPdf-viewer` or else it will be added to the default project in your `angular.json` file. 
+Use node package manager [npm](https://www.npmjs.com/package/img-pdf-viewer) to install package.
 
-## Build
+```bash
+npm i img-pdf-viewer
+```
 
-Run `ng build imgPdf-viewer` to build the project. The build artifacts will be stored in the `dist/` directory.
+## Way to use
 
-## Publishing
+1. import the package in app.module.ts like below and add it to imports array.
 
-After building your library with `ng build imgPdf-viewer`, go to the dist folder `cd dist/img-pdf-viewer` and run `npm publish`.
+import { ImgPdfViewerModule } from 'img-pdf-viewer';
 
-## Running unit tests
+@NgModule({
+imports: [ImgPdfViewerModule],
+})
 
-Run `ng test imgPdf-viewer` to execute the unit tests via [Karma](https://karma-runner.github.io).
+export class AppModule {}
 
-## Further help
+2.  Import ng2-pdfviewer like above and add it to imports section because it depends on this package.
+    [ng2-pdfviewer](https://www.npmjs.com/package/ng2-pdf-viewer)
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+3.  To pass config in app.component.ts you have to import DocPreviewConfig like below.
+
+import { DocPreviewConfig } from 'img-pdf-viewer';
+
+```
+docPreviewConfig: DocPreviewConfig = {
+    zoomIn: true,
+    zoomOut: true,
+    rotate: true,
+    pageIndicator: true,
+    download: true,
+    openModal: true,
+    close: false,
+    docScreenWidth: '100%',
+    modalSize: 'md',
+    customStyle: '',
+
+  };
+
+```
+
+4. in you html (app.component.html)
+
+```
+<ngx-imgPdf-viewer
+        [documentURL]="url"
+        [docPreviewConfig]="docPreviewConfig"
+      >
+</ngx-imgPdf-viewer>
+
+```
+
+5. Install bootstrap,ng-bootstrap and fontawesome
+
+```
+a).  ng add @ng-bootstrap/ng-bootstrap
+
+b). fontawesome link
+
+<link
+rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.0/css/all.min.css"
+integrity="sha512-10/jx2EXwxxWqCLX/hHth/vu2KY3jCF70dCQB8TSgNjbCVAC/8vai53GfMDrO2Emgwccf2pJqxct9ehpzG+MTw=="
+crossorigin="anonymous"
+referrerpolicy="no-referrer"
+/>
+
+c). bootstrap link
+
+<link
+href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+rel="stylesheet"
+integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+crossorigin="anonymous"
+/>
+```
+
+6. Have a look at [Demo](https://stackblitz.com/edit/img-pdf-viewer)

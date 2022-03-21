@@ -18,16 +18,15 @@ export class AppComponent {
   // url = 'http://www.africau.edu/images/default/sample.pdf';
 
   // 2. pdf url with no extension
-  url =
-    'https://proclaim-api-prod.mediassist.in/download/5386/mediassistindia.com/613effb6-b7a5-4924-b48e-bfb4fac8fb80';
+  // url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy';
 
   //1. image url with .jpg extension
   // url =
   //   'https://www.interactivesearchmarketing.com/wp-content/uploads/2014/06/png-vs-jpeg.jpg';
 
-  //2.  image url with no extension
-  // url =
-  //   'https://proclaim-api-prod.mediassist.in/download/5386/mediassistindia.com/6820313e-b526-45f2-93fe-47ec9aaae91e';
+  // 2.  image url with no extension
+  url =
+    'https://proclaim-api-prod.mediassist.in/download/5386/mediassistindia.com/6820313e-b526-45f2-93fe-47ec9aaae91e';
 
   // test on archieved url which can be vioew as blob
   // url = 'https://stg-yellow.ihxpro.in/swagger/index.html';

@@ -137,7 +137,10 @@ export class ImgPdfViewerComponent implements OnInit {
 
   fileTypeCheckerOnContentType() {
     if (this.contentType !== undefined || this.contentType !== '') {
-      if (this.contentType.split('/').includes(this.pdfType)) {
+      if (
+        this.contentType.split('/').includes(this.pdfType) ||
+        this.contentType.includes(this.pdfType)
+      ) {
         this.documentType = this.pdfType;
       } else if (this.contentType.split('/').includes(this.imageType)) {
         this.documentType = this.imageType;
