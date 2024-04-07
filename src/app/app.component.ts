@@ -15,7 +15,7 @@ export class AppComponent {
   };
 
   //1. pdf url with .pdf extension
-  url = 'http://www.africau.edu/images/default/sample.pdf';
+  url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
 
   // 2. pdf url with no extension
   // url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy';
@@ -23,7 +23,7 @@ export class AppComponent {
   //1. image url with .jpg extension
   // url =
   //   'https://www.interactivesearchmarketing.com/wp-content/uploads/2014/06/png-vs-jpeg.jpg';
-  
+
   // No document sending
   // url = '';
 }
