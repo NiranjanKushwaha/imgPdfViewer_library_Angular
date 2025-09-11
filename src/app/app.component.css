@@ -1,0 +1,23 @@
+/* App Component Styles */
+:host {
+  display: block;
+  height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* Prevent body scroll */
+}
+
+/* Ensure the app takes full viewport */
+app-root {
+  display: block;
+  height: 100vh;
+  width: 100%;
+}

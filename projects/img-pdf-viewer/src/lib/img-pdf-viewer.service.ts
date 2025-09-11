@@ -1,82 +1,180 @@
 import { Injectable } from '@angular/core';
+import { DocumentType } from './types';
+import { 
+  downloadDocument, 
+  getFileName, 
+  detectDocumentType, 
+  isValidUrl,
+  createBlobFromDataUrl,
+  revokeBlobUrl
+} from './utils';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ImgPdfViewerService {
   constructor() {}
-  downloadBlob(blob: string, fileName: string) {
-    var a = document.createElement('a');
-    a.download = fileName;
-    a.href = blob;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+
+  /**
+   * Download a blob URL
+   */
+  downloadBlob(blob: string, fileName: string): void {
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = blob;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
-  downloadResource(url: string, fileName: string = '') {
-    if (url) {
-      if (!fileName) fileName = url.split('/').pop();
-      fetch(url, {
-        headers: new Headers({
-          Origin: location.origin,
-        }),
-        mode: 'cors',
-      })
-        .then((response) => response.blob())
-        .then((blob) => {
-          let blobUrl = window.URL.createObjectURL(blob);
-          this.downloadBlob(blobUrl, fileName);
-        })
-        .catch((e) => {
-          console.log('something went wrong');
-        });
+  /**
+   * Download a resource from URL
+   */
+  downloadResource(url: string, fileName: string = ''): void {
+    if (!url) {
+      console.warn('No URL provided for download');
+      return;
     }
+
+    if (!fileName) {
+      fileName = this.getFileName(url);
+    }
+
+    // Use the utility function for better error handling
+    downloadDocument(url, fileName);
   }
 
-  fileTypeChecker(file: string) {
-    const imgTagSupportableType = [
-      '.png',
-      '.jpeg',
-      '.gif',
-      '.apng',
-      '.svg',
-      '.bmp',
-      '.ico',
-      '.jpg',
-      '.img',
+  /**
+   * Get file name from URL
+   */
+  getFileName(url: string): string {
+    return getFileName(url);
+  }
+
+  /**
+   * Check file type from URL or filename
+   */
+  fileTypeChecker(file: string): DocumentType {
+    if (!file) {
+      return 'unknown';
+    }
+
+    const extension = file.split('.').pop()?.toLowerCase();
+    if (!extension) {
+      return 'unknown';
+    }
+
+    const imageExtensions = [
+      'png', 'jpeg', 'jpg', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico', 'apng'
     ];
 
-    if (!file) {
-      return '';
+    if (extension === 'pdf') {
+      return 'pdf';
+    } else if (imageExtensions.includes(extension)) {
+      return 'image';
     } else {
-      file = file.toLowerCase();
-      if (file.includes('.pdf')) {
-        return 'pdf';
-      } else if (imgTagSupportableType.some((el) => file.includes(el))) {
-        return 'image';
-      } else {
-        return '';
-      }
+      return 'unknown';
     }
   }
 
-  openBlobInNewWindow(url: string) {
-    if (url) {
-      fetch(url, {
-        headers: new Headers({
-          Origin: location.origin,
-        }),
-        mode: 'cors',
+  /**
+   * Open blob in new window
+   */
+  openBlobInNewWindow(url: string): void {
+    if (!url) {
+      console.warn('No URL provided for opening in new window');
+      return;
+    }
+
+    // For data URLs, convert to blob URL first
+    if (url.startsWith('data:')) {
+      const blobUrl = createBlobFromDataUrl(url);
+      if (blobUrl) {
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        // Clean up blob URL after a delay
+        setTimeout(() => revokeBlobUrl(blobUrl), 1000);
+        return;
+      }
+    }
+
+    // For regular URLs, try to fetch and create blob
+    fetch(url, {
+      headers: new Headers({
+        Origin: location.origin,
+      }),
+      mode: 'cors',
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.blob();
       })
-        .then((response) => response.blob())
-        .then((blob) => {
-          let blobUrl = window.URL.createObjectURL(blob);
-          window.open(blobUrl, '_blank');
-        })
-        .catch((e) => {
-          console.log('Something went wrong');
-        });
+      .then((blob) => {
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        // Clean up blob URL after a delay
+        setTimeout(() => revokeBlobUrl(blobUrl), 1000);
+      })
+      .catch((error) => {
+        console.error('Failed to open blob in new window:', error);
+        // Fallback: try to open the original URL
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+  }
+
+  /**
+   * Validate URL
+   */
+  isValidUrl(url: string): boolean {
+    return isValidUrl(url);
+  }
+
+  /**
+   * Detect document type
+   */
+  detectDocumentType(url: string): DocumentType {
+    return detectDocumentType(url);
+  }
+
+  /**
+   * Get file size from URL (if accessible)
+   */
+  async getFileSize(url: string): Promise<number | null> {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      const contentLength = response.headers.get('content-length');
+      return contentLength ? parseInt(contentLength, 10) : null;
+    } catch (error) {
+      console.warn('Could not determine file size:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get MIME type from URL
+   */
+  async getMimeType(url: string): Promise<string | null> {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.headers.get('content-type');
+    } catch (error) {
+      console.warn('Could not determine MIME type:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if URL is accessible
+   */
+  async isUrlAccessible(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      return false;
     }
   }
 }

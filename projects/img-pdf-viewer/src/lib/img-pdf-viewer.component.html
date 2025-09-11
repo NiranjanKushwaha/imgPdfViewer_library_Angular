@@ -1,102 +1,134 @@
 <div
-  *ngIf="documentURL; else noDocumentFound"
-  [ngStyle]="{ width: docPreviewConfig.docScreenWidth }"
+  #containerRef
+  class="document-viewer-container"
+  [class.fullscreen]="state.fullscreen"
+  [class.embedded]="mergedConfig.embedded"
+  [style.height]="mergedConfig.height"
+  [style.width]="mergedConfig.width"
+  [ngClass]="mergedConfig.className"
 >
-  <div class="action_btns">
-    <button
-      class="btn-outline-info btn download_btn"
-      (click)="downloadFile()"
-      *ngIf="docPreviewConfig.download"
-      [disabled]="isArchieved"
-    >
-      <i class="fa fa-download" aria-hidden="true"></i>
-    </button>
-    <button
-      class="zoomIn btn btn-outline-info"
-      (click)="upDateZoom('increment')"
-      *ngIf="docPreviewConfig.zoomIn"
-      [disabled]="isArchieved"
-    >
-      <i class="fa fa-search-plus" aria-hidden="true"></i>
-    </button>
-
-    <button
-      class="current_zoom_level btn btn-outline-info"
-      *ngIf="docPreviewConfig.pageIndicator"
-      [disabled]="isArchieved"
-    >
-      <span> {{ zoom_in }} </span>
-    </button>
-    <button
-      class="zoomOut btn btn-outline-info"
-      (click)="upDateZoom('decrement')"
-      *ngIf="docPreviewConfig.zoomOut"
-      [disabled]="isArchieved"
-    >
-      <i class="fa fa-search-minus" aria-hidden="true"></i>
-    </button>
-    <button
-      class="rotate btn btn-outline-info"
-      (click)="rotateDoc()"
-      *ngIf="docPreviewConfig.rotate"
-      [disabled]="isArchieved"
-    >
-      <i class="fa fa-refresh" aria-hidden="true"></i>
-    </button>
-    <button
-      class="btn-outline-info btn fullScreen"
-      (click)="viewInFullScreen()"
-      *ngIf="docPreviewConfig.openModal"
-      [disabled]="isArchieved"
-    >
-      <i class="fa fa-arrows-alt" aria-hidden="true"></i>
-    </button>
-    <button
-      class="btn close_btn btn-outline-info"
-      *ngIf="docPreviewConfig.close"
-      (click)="closeModal()"
-      [disabled]="isArchieved"
-    >
-      <i class="fa fa-times" aria-hidden="true"></i>
-    </button>
-  </div>
-  <ng-container *ngIf="documentType && !isArchieved; else notSupported">
-    <div class="pdf_type" *ngIf="documentType === pdfType">
-      <pdf-viewer
-        [src]="documentURL"
-        [rotation]="rotation"
-        [original-size]="false"
-        [show-all]="true"
-        [fit-to-page]="true"
-        [zoom]="zoom_in"
-        [zoom-scale]="'page-width'"
-        [stick-to-page]="false"
-        [autoresize]="true"
-        style="width: 100%; height: 600px"
-      ></pdf-viewer>
+  <!-- No Document State -->
+  <div *ngIf="!effectiveDocumentUrl" class="no-document-state">
+    <div class="no-document-content">
+      <i class="fas fa-file-alt no-document-icon"></i>
+      <h3>No Document Found</h3>
+      <p>Please provide a document URL to preview</p>
     </div>
+  </div>
 
-    <div class="img_type" *ngIf="documentType === imageType">
-      <div class="text-center img_container">
-        <img
-          [src]="documentURL"
-          alt="fileName"
-          id="rotate_pic"
-          #view_img
-          style="width: 100%"
-        />
+  <!-- Document Content -->
+  <div *ngIf="effectiveDocumentUrl" class="document-content">
+    <!-- Toolbar -->
+    <ngx-document-toolbar
+      *ngIf="mergedConfig.showToolbar && !mergedConfig.embedded"
+      [state]="state"
+      [documentType]="detectedDocumentType"
+      [showDownload]="mergedConfig.showDownload"
+      [showInNewTab]="mergedConfig.showInNewTab"
+      [showZoom]="mergedConfig.showZoom"
+      [showRotation]="mergedConfig.showRotation"
+      [showFullscreen]="mergedConfig.showFullscreen"
+      [showViewModeToggle]="mergedConfig.showViewModeToggle"
+      [embedded]="mergedConfig.embedded"
+      (onDownload)="onDownload()"
+      (onOpenInNewTab)="onOpenInNewTab()"
+      (onZoomIn)="onZoomIn()"
+      (onZoomOut)="onZoomOut()"
+      (onZoomReset)="onZoomReset()"
+      (onRotateLeft)="onRotateLeft()"
+      (onRotateRight)="onRotateRight()"
+      (onPreviousPage)="onPreviousPage()"
+      (onNextPage)="onNextPage()"
+      (onFullscreen)="onFullscreen()"
+      (onToggleViewMode)="onToggleViewMode()"
+    ></ngx-document-toolbar>
+
+    <!-- Document Viewer -->
+    <div class="viewer-container">
+      <!-- PDF Viewer -->
+      <ngx-pdf-viewer
+        *ngIf="detectedDocumentType === 'pdf' && !state.error"
+        [src]="effectiveDocumentUrl"
+        [currentPage]="state.currentPage"
+        [zoom]="state.zoom"
+        [rotation]="state.rotation"
+        [viewMode]="state.viewMode"
+        [height]="mergedConfig.embedded ? '100%' : 'calc(100% - 60px)'"
+        [width]="'100%'"
+        [fullscreen]="state.fullscreen"
+        (onLoad)="onDocumentLoad({ type: 'pdf', totalPages: $event.totalPages })"
+        (onError)="onDocumentError($event)"
+        (onPageChange)="updatePage($event)"
+      ></ngx-pdf-viewer>
+
+      <!-- Image Viewer -->
+      <ngx-image-viewer
+        *ngIf="detectedDocumentType === 'image' && !state.error"
+        [src]="effectiveDocumentUrl"
+        [zoom]="state.zoom"
+        [rotation]="state.rotation"
+        [height]="mergedConfig.embedded ? '100%' : 'calc(100% - 60px)'"
+        [width]="'100%'"
+        (onLoad)="onDocumentLoad({ type: 'image', fileName: $event.alt, dimensions: { width: $event.naturalWidth, height: $event.naturalHeight } })"
+        (onError)="onDocumentError($event)"
+        (onZoomChange)="updateZoom($event)"
+        (onRotationChange)="updateRotation($event)"
+      ></ngx-image-viewer>
+
+      <!-- Unsupported Document Type -->
+      <div *ngIf="detectedDocumentType === 'unknown' && !state.loading" class="unsupported-state">
+        <div class="unsupported-content">
+          <i class="fas fa-question-circle unsupported-icon"></i>
+          <h3>Unsupported Document Type</h3>
+          <p>This document format is not supported for preview</p>
+          <div class="unsupported-actions">
+            <button class="btn btn-primary" (click)="onDownload()">
+              <i class="fas fa-download btn-icon"></i>
+              Download to view
+            </button>
+            <button class="btn btn-secondary" (click)="onOpenInNewTab()">
+              <i class="fas fa-external-link-alt btn-icon"></i>
+              Open in new tab
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="state.error" class="error-state">
+        <div class="error-content">
+          <i class="fas fa-exclamation-triangle error-icon"></i>
+          <h3>Failed to Load Document</h3>
+          <p>{{ state.error }}</p>
+          <div class="error-actions">
+            <button class="btn btn-primary" (click)="initializeViewer()">
+              <i class="fas fa-redo btn-icon"></i>
+              Retry
+            </button>
+            <button class="btn btn-secondary" (click)="onOpenInNewTab()">
+              <i class="fas fa-external-link-alt btn-icon"></i>
+              Open in new tab
+            </button>
+            <button class="btn btn-secondary" (click)="onDownload()">
+              <i class="fas fa-download btn-icon"></i>
+              Download
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="state.loading" class="loading-state">
+        <div class="loading-content">
+          <div class="loading-spinner"></div>
+          <div class="loading-text">
+            <p>Loading document...</p>
+            <p *ngIf="state.documentInfo" class="document-info">
+              {{ state.documentInfo.fileName }}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
-  </ng-container>
-  <ng-template #notSupported>
-    <div class="text-center mt-5">
-      <p class="text-primary">File Type Not Supported</p>
-    </div>
-  </ng-template>
-</div>
-
-<ng-template #noDocumentFound>
-  <div class="text-center mt-5">
-    <p class="text-primary">No document found to preview</p>
   </div>
-</ng-template>
+</div>
