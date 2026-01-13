@@ -3,251 +3,582 @@ import {
   ElementRef,
   Input,
   OnInit,
+  OnDestroy,
+  OnChanges,
+  SimpleChanges,
   Output,
+  EventEmitter,
   ViewChild,
+  ChangeDetectorRef,
+  NgZone,
+  Inject,
+  Optional,
 } from '@angular/core';
-import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { CommonConstant } from './Common.constant';
-import { DocPreviewConfig } from './docConfig';
+import { Icons } from './icons/icons.constant';
+import {
+  DocumentViewerConfig,
+  DocumentType,
+  DocumentInfo,
+  ViewerState,
+} from './types';
 import { ImgPdfViewerService } from './img-pdf-viewer.service';
+import { ErrorBoundaryService } from './error-boundary.service';
+import {
+  detectDocumentType,
+  detectDocumentTypeAsync,
+  isValidUrl,
+  enterFullscreen,
+  exitFullscreen,
+  isFullscreen,
+} from './utils';
 
 @Component({
   selector: 'ngx-imgPdf-viewer',
   templateUrl: './img-pdf-viewer.component.html',
   styleUrls: ['./img-pdf-viewer.component.css'],
 })
-export class ImgPdfViewerComponent implements OnInit {
-  private _docPreviewConfig: DocPreviewConfig;
-  private _documentURL: string;
-  private _fileName: string;
-  get docPreviewConfig(): DocPreviewConfig {
-    return this._docPreviewConfig;
-  }
-  @Input() set docPreviewConfig(value: DocPreviewConfig) {
-    if (value !== this._docPreviewConfig) {
-      this._docPreviewConfig = value;
-    }
+export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
+  // Inputs - New API
+  @Input() documentUrl: string = '';
+  @Input() documentType?: DocumentType;
+  @Input() title?: string;
+  @Input() config?: DocumentViewerConfig;
+
+  // Legacy inputs for backward compatibility
+  @Input() documentURL: string = '';
+  @Input() docPreviewConfig: any = {};
+
+  // Outputs
+  @Output() onError = new EventEmitter<string>();
+  @Output() onLoad = new EventEmitter<DocumentInfo>();
+  @Output() onZoomChange = new EventEmitter<number>();
+  @Output() onRotationChange = new EventEmitter<number>();
+  @Output() onPageChange = new EventEmitter<number>();
+
+  // ViewChild references
+  @ViewChild('containerRef', { static: false })
+  containerRef!: ElementRef<HTMLDivElement>;
+
+  // Component state
+  state: ViewerState = {
+    currentPage: 1,
+    totalPages: 1,
+    zoom: 100,
+    rotation: 0,
+    loading: true,
+    error: null,
+    fullscreen: false,
+    documentInfo: null,
+    viewMode: 'single',
+  };
+
+  // Computed properties
+  get effectiveDocumentUrl(): string {
+    return this.documentUrl || this.documentURL;
   }
 
-  get documentURL(): string {
-    return this._documentURL;
+  get detectedDocumentType(): DocumentType {
+    // 1. Explicit type override from Input
+    if (this.documentType && this.documentType !== 'unknown') {
+      return this.documentType;
+    }
+
+    // 2. Already detected type in state (from async detection)
+    if (
+      this.state.documentInfo?.type &&
+      this.state.documentInfo.type !== 'unknown'
+    ) {
+      return this.state.documentInfo.type;
+    }
+
+    // 3. Heuristic / Extension check
+    if (!this.effectiveDocumentUrl) return 'unknown';
+    const heuristicType = detectDocumentType(this.effectiveDocumentUrl);
+
+    // 4. Config fallback
+    if (heuristicType === 'unknown' && this.mergedConfig.fallbackType) {
+      return this.mergedConfig.fallbackType;
+    }
+
+    return heuristicType;
   }
 
-  @Input() set documentURL(value: string) {
-    if (value !== this._documentURL) {
-      this._documentURL = value;
+  // Async document type detection for URLs without extensions
+  async getDetectedDocumentTypeAsync(): Promise<DocumentType> {
+    if (this.documentType) {
+      return this.documentType;
     }
+
+    const url = this.effectiveDocumentUrl;
+    if (!url) {
+      return 'unknown';
+    }
+
+    return await detectDocumentTypeAsync(url, this.mergedConfig.proxyUrl);
+  }
+
+  get mergedConfig(): DocumentViewerConfig {
+    // Start with defaults
+    const defaultConfig: DocumentViewerConfig = {
+      showToolbar: true,
+      showDownload: true,
+      showZoom: true,
+      showRotation: true,
+      showFullscreen: true,
+      showInNewTab: true,
+      showPagination: true,
+      showViewModeToggle: true,
+      height: '100vh', // Full viewport height by default
+      width: '100%',
+      embedded: false,
+      initialZoom: 100,
+      maxZoom: 300,
+      minZoom: 50,
+      viewMode: 'single',
+      modalSize: 'lg',
+    };
+
+    // Merge with new API config
+    const newApiConfig = this.config || {};
+
+    // Merge with legacy config if present
+    const legacyConfig: DocumentViewerConfig = {};
+    if (this.docPreviewConfig) {
+      legacyConfig.showToolbar =
+        this.docPreviewConfig.zoomIn !== false ||
+        this.docPreviewConfig.zoomOut !== false ||
+        this.docPreviewConfig.rotate !== false;
+      legacyConfig.showDownload = this.docPreviewConfig.download !== false;
+      legacyConfig.showZoom =
+        this.docPreviewConfig.zoomIn !== false ||
+        this.docPreviewConfig.zoomOut !== false;
+      legacyConfig.showRotation = this.docPreviewConfig.rotate !== false;
+      legacyConfig.showFullscreen = this.docPreviewConfig.openModal !== false;
+      legacyConfig.showPagination =
+        this.docPreviewConfig.pageIndicator !== false;
+      legacyConfig.height = this.docPreviewConfig.docScreenWidth || '100%';
+      legacyConfig.modalSize = this.docPreviewConfig.modalSize || 'lg';
+      legacyConfig.className = this.docPreviewConfig.customStyle || '';
+    }
+
+    return { ...defaultConfig, ...legacyConfig, ...newApiConfig };
+  }
+
+  // Legacy properties for backward compatibility
+  get legacyDocPreviewConfig(): any {
+    return {
+      zoomIn: this.mergedConfig.showZoom,
+      zoomOut: this.mergedConfig.showZoom,
+      rotate: this.mergedConfig.showRotation,
+      pageIndicator: this.mergedConfig.showPagination,
+      download: this.mergedConfig.showDownload,
+      openModal: this.mergedConfig.showFullscreen,
+      close: true,
+      docScreenWidth: this.mergedConfig.width,
+      modalSize: this.mergedConfig.modalSize,
+      customStyle: this.mergedConfig.customStyle || '',
+    };
+  }
+
+  get legacyDocumentURL(): string {
+    return this.documentUrl;
   }
 
   get fileName(): string {
-    return this._fileName;
+    return this.title || this.state.documentInfo?.fileName || 'document';
   }
 
-  @Input() set fileName(value: string) {
-    if (value !== this._fileName) {
-      this._fileName = value;
-    }
-  }
-
-  documentType: string;
-  contentType: string;
-  zoom_in: number = 1;
-  rotation: number = 0;
-  modalRef: NgbModalRef;
-  isArchieved: boolean = false;
-  pdfType: string = CommonConstant.PDFTYPE;
-  imageType: string = CommonConstant.IMAGETYPE;
-  // isModalView:boolean=false;
-
-  @ViewChild('view_img') view_img: ElementRef;
-  @Output() inputModelRef: NgbModalRef;
-  // @Output() isClosed = new EventEmitter<boolean>();
+  // Internal state
+  isModalOpen = false;
+  icons = Icons;
+  private fullscreenChangeListener?: () => void;
 
   constructor(
     private _helper: ImgPdfViewerService,
-    private modalService: NgbModal
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone,
+    private errorBoundary: ErrorBoundaryService
   ) {}
 
-  ngOnChanges(): void {
-    if (this.documentType) {
-      this.zoom_in = 1;
-      this.rotation = 0;
-      this.documentTypeDeterminer();
-      this.defaultDocumentIconsSetting();
-    }
-  }
-
   ngOnInit(): void {
-    this.defaultDocumentIconsSetting();
-    this.documentTypeDeterminer();
+    this.initializeViewer();
+    this.setupFullscreenListener();
   }
 
-  defaultDocumentIconsSetting() {
-    const sampleDocPreviewConfig = {
-      zoomIn: true,
-      zoomOut: true,
-      rotate: true,
-      pageIndicator: true,
-      download: true,
-      openModal: true,
-      close: true,
-      docScreenWidth: '100%',
-      modalSize: 'lg',
-      customStyle: '',
+  ngOnChanges(changes: SimpleChanges): void {
+    if (
+      (changes['documentUrl'] && !changes['documentUrl'].firstChange) ||
+      (changes['documentURL'] && !changes['documentURL'].firstChange)
+    ) {
+      this.initializeViewer();
+    }
+    if (changes['config'] && !changes['config'].firstChange) {
+      this.updateConfig();
+    }
+    if (
+      changes['docPreviewConfig'] &&
+      !changes['docPreviewConfig'].firstChange
+    ) {
+      this.updateConfig();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.cleanup();
+  }
+
+  async initializeViewer(): Promise<void> {
+    if (!this.effectiveDocumentUrl) {
+      this.setError('No document URL provided');
+      return;
+    }
+
+    if (!isValidUrl(this.effectiveDocumentUrl)) {
+      this.setError('Invalid document URL provided');
+      return;
+    }
+
+    this.state = {
+      ...this.state,
+      loading: true,
+      error: null,
+      zoom: this.mergedConfig.initialZoom || 100,
+      rotation: 0,
+      currentPage: 1,
+      viewMode: this.mergedConfig.viewMode || 'single',
     };
-    if (!this.docPreviewConfig) {
-      this.docPreviewConfig = sampleDocPreviewConfig;
-    } else {
-      Object.keys(sampleDocPreviewConfig).forEach((key) => {
-        if (
-          this.docPreviewConfig[key] === undefined &&
-          typeof sampleDocPreviewConfig[key] === CommonConstant.BOOLEAN
-        ) {
-          this.docPreviewConfig[key] = true;
-        }
-        if (
-          this.docPreviewConfig[key] === undefined &&
-          typeof this.docPreviewConfig[key] !== CommonConstant.BOOLEAN
-        ) {
-          // this.docPreviewConfig[key] = false;
-          this.docPreviewConfig[key] = sampleDocPreviewConfig[key];
-        }
-      });
-    }
+
+    // Use async document type detection for better accuracy
+    await this.initializeDocumentInfoAsync();
   }
 
-  async documentTypeDeterminer() {
-    this.documentType = '';
-    const fileTypeOrURL = this.documentURL || this.fileName;
-    const fileTpe = this._helper.fileTypeChecker(fileTypeOrURL);
-    if (fileTpe) {
-      if (fileTpe === this.pdfType) {
-        this.documentType = this.pdfType;
-        await this.archivedFileTypeChecker(this.documentURL);
-      }
-      if (fileTpe === this.imageType) {
-        this.documentType = this.imageType;
-        await this.archivedFileTypeChecker(this.documentURL);
-      }
-    } else {
-      await this.archivedFileTypeChecker(this.documentURL);
-      this.fileTypeCheckerOnContentType();
-    }
-  }
+  private initializeDocumentInfo(): void {
+    const documentInfo: DocumentInfo = {
+      type: this.detectedDocumentType,
+      fileName:
+        this.title || this._helper.getFileName(this.effectiveDocumentUrl),
+    };
 
-  fileTypeCheckerOnContentType() {
-    if (this.contentType !== undefined || this.contentType !== '') {
-      if (
-        this.contentType.split('/').includes(this.pdfType) ||
-        this.contentType.includes(this.pdfType)
-      ) {
-        this.documentType = this.pdfType;
-      } else if (this.contentType.split('/').includes(this.imageType)) {
-        this.documentType = this.imageType;
-      } else {
-        this.documentType = '';
-        this.isArchieved = true;
-      }
-    }
-  }
+    this.state = {
+      ...this.state,
+      documentInfo,
+    };
 
-  async archivedFileTypeChecker(url: string) {
-    this.contentType = '';
-    let isBlobViewed = false;
-    if (url) {
-      let response = await fetch(url);
-      this.contentType = response.headers.get('Content-Type');
-      if (this.contentType === null || this.contentType.includes('text/html')) {
-        this.isArchieved = true;
-        if (!isBlobViewed && response.status === 200) {
-          isBlobViewed = true;
-          this.closeModal();
-          // this._commonService.getFileFromURLInNewTab(url);
-          this._helper.openBlobInNewWindow(url);
-        }
-      }
-    }
-  }
-
-  closeModal() {
-    this.inputModelRef && this.inputModelRef.close();
-    // this.isClosed.emit(true);
-    // this.isModalView = false;
-  }
-
-  downloadFile() {
-    this._helper.downloadResource(this.documentURL, this.fileName);
-  }
-  upDateZoom(zoomType: string) {
-    if (this.documentType === this.pdfType) {
-      switch (zoomType) {
-        case 'decrement':
-          if (this.zoom_in) {
-            this.zoom_in = this.zoom_in - 0.5;
-          }
-          break;
-        case 'increment':
-          this.zoom_in = this.zoom_in + 0.5;
-          break;
-
-        default:
-          this.zoom_in = 1;
-          break;
-      }
-    }
-    if (this.documentType === this.imageType) {
-      const currWidth = this.view_img.nativeElement.clientWidth;
-      switch (zoomType) {
-        case 'decrement':
-          if (this.zoom_in) {
-            this.zoom_in = this.zoom_in - 0.5;
-            this.view_img.nativeElement.style.width = currWidth - 150 + 'px';
-          }
-          break;
-        case 'increment':
-          this.zoom_in = this.zoom_in + 0.5;
-          this.view_img.nativeElement.style.width = currWidth + 150 + 'px';
-          break;
-
-        default:
-          this.zoom_in = 1;
-          break;
-      }
-    }
-  }
-
-  rotateDoc() {
-    if (this.documentType === this.pdfType) {
-      this.rotation += 90;
-    }
-    if (this.documentType === this.imageType) {
-      this.rotation += 90;
-      this.view_img.nativeElement.style.webkitTransform =
-        'rotate(' + this.rotation + 'deg)';
-      this.view_img.nativeElement.style.mozTransform =
-        'rotate(' + this.rotation + 'deg)';
-      this.view_img.nativeElement.style.msTransform =
-        'rotate(' + this.rotation + 'deg)';
-      this.view_img.nativeElement.style.oTransform =
-        'rotate(' + this.rotation + 'deg)';
-      this.view_img.nativeElement.style.transform =
-        'rotate(' + this.rotation + 'deg)';
-    }
-  }
-
-  viewInFullScreen() {
-    // this.isModalView = true;
-    this.modalRef = this.modalService.open(ImgPdfViewerComponent, {
-      size: this.docPreviewConfig.modalSize || CommonConstant.LARGEMODAL,
-      keyboard: false,
-      backdrop: false,
-      windowClass: this.docPreviewConfig?.customStyle,
+    this.ngZone.run(() => {
+      this.onLoad.emit(documentInfo);
+      this.cdr.detectChanges();
     });
-    this.modalRef.componentInstance.documentURL = this.documentURL;
-    this.modalRef.componentInstance.inputModelRef = this.modalRef;
-    this.modalRef.componentInstance.fileName = this.fileName;
-    this.modalRef.componentInstance.docPreviewConfig = {
-      openModal: false,
+  }
+
+  private async initializeDocumentInfoAsync(): Promise<void> {
+    try {
+      // Use async detection for better accuracy, especially for URLs without extensions
+      let detectedType = await this.getDetectedDocumentTypeAsync();
+
+      // Industrial Fallback Logic:
+      // 1. If auto-detection returns unknown, check config.fallbackType
+      if (detectedType === 'unknown' && this.mergedConfig.fallbackType) {
+        detectedType = this.mergedConfig.fallbackType;
+      }
+
+      // 2. Final heuristic fallback: if still unknown but URL path looks like PDF/Image,
+      // the synchronous detectDocumentType (called inside getDetectedDocumentTypeAsync)
+      // has already tried heuristics. If it's still unknown here, we can try one last
+      // "hopeful" guess if the URL contains keywords but wasn't caught yet.
+
+      const documentInfo: DocumentInfo = {
+        type: detectedType,
+        fileName:
+          this.title || this._helper.getFileName(this.effectiveDocumentUrl),
+      };
+
+      this.state = {
+        ...this.state,
+        documentInfo,
+        loading: false,
+      };
+
+      this.ngZone.run(() => {
+        this.onLoad.emit(documentInfo);
+        this.cdr.detectChanges();
+      });
+    } catch (error) {
+      this.setError('Failed to detect document type');
+    }
+  }
+
+  private updateConfig(): void {
+    // Update state based on new config
+    if (
+      this.mergedConfig.initialZoom &&
+      this.mergedConfig.initialZoom !== this.state.zoom
+    ) {
+      this.state.zoom = this.mergedConfig.initialZoom;
+    }
+    if (
+      this.mergedConfig.viewMode &&
+      this.mergedConfig.viewMode !== this.state.viewMode
+    ) {
+      this.state.viewMode = this.mergedConfig.viewMode;
+    }
+  }
+
+  private setupFullscreenListener(): void {
+    this.fullscreenChangeListener = () => {
+      this.state.fullscreen = isFullscreen();
+      this.cdr.detectChanges();
     };
+
+    document.addEventListener(
+      'fullscreenchange',
+      this.fullscreenChangeListener
+    );
+    document.addEventListener(
+      'webkitfullscreenchange',
+      this.fullscreenChangeListener
+    );
+    document.addEventListener(
+      'mozfullscreenchange',
+      this.fullscreenChangeListener
+    );
+    document.addEventListener(
+      'MSFullscreenChange',
+      this.fullscreenChangeListener
+    );
+  }
+
+  private cleanup(): void {
+    if (this.fullscreenChangeListener) {
+      document.removeEventListener(
+        'fullscreenchange',
+        this.fullscreenChangeListener
+      );
+      document.removeEventListener(
+        'webkitfullscreenchange',
+        this.fullscreenChangeListener
+      );
+      document.removeEventListener(
+        'mozfullscreenchange',
+        this.fullscreenChangeListener
+      );
+      document.removeEventListener(
+        'MSFullscreenChange',
+        this.fullscreenChangeListener
+      );
+    }
+  }
+
+  private setError(message: string): void {
+    this.state = {
+      ...this.state,
+      loading: false,
+      error: message,
+    };
+
+    this.ngZone.run(() => {
+      this.onError.emit(message);
+      this.cdr.detectChanges();
+    });
+
+    this.errorBoundary.reportError(message, 'Document viewer');
+  }
+
+  // Event handlers
+  onDocumentLoad(info: DocumentInfo): void {
+    this.state = {
+      ...this.state,
+      loading: false,
+      error: null,
+      documentInfo: info,
+      totalPages: info.totalPages || this.state.totalPages,
+    };
+
+    this.ngZone.run(() => {
+      this.onLoad.emit(info);
+      this.cdr.detectChanges();
+    });
+  }
+
+  onDocumentError(error: string): void {
+    this.setError(error);
+
+    // Auto-retry for timeout errors
+    if (error.includes('timeout') || error.includes('network')) {
+      setTimeout(() => {
+        if (this.state.error) {
+          this.initializeViewer();
+        }
+      }, 2000);
+    }
+  }
+
+  onZoomIn(): void {
+    const newZoom = Math.min(
+      this.state.zoom + 25,
+      this.mergedConfig.maxZoom || 300
+    );
+    this.updateZoom(newZoom);
+  }
+
+  onZoomOut(): void {
+    const newZoom = Math.max(
+      this.state.zoom - 25,
+      this.mergedConfig.minZoom || 50
+    );
+    this.updateZoom(newZoom);
+  }
+
+  onZoomReset(): void {
+    this.updateZoom(this.mergedConfig.initialZoom || 100);
+  }
+
+  updateZoom(zoom: number): void {
+    this.state = { ...this.state, zoom };
+    this.ngZone.run(() => {
+      this.onZoomChange.emit(zoom);
+      this.cdr.detectChanges();
+    });
+  }
+
+  onRotateLeft(): void {
+    this.updateRotation(this.state.rotation - 90);
+  }
+
+  onRotateRight(): void {
+    this.updateRotation(this.state.rotation + 90);
+  }
+
+  updateRotation(rotation: number): void {
+    // Normalize rotation to 0-360 range
+    const normalizedRotation = ((rotation % 360) + 360) % 360;
+    this.state = { ...this.state, rotation: normalizedRotation };
+    this.ngZone.run(() => {
+      this.onRotationChange.emit(normalizedRotation);
+      this.cdr.detectChanges();
+    });
+  }
+
+  onPreviousPage(): void {
+    if (this.state.currentPage > 1) {
+      const newPage = this.state.currentPage - 1;
+      this.updatePage(newPage);
+    }
+  }
+
+  onNextPage(): void {
+    if (this.state.currentPage < this.state.totalPages) {
+      const newPage = this.state.currentPage + 1;
+      this.updatePage(newPage);
+    }
+  }
+
+  updatePage(page: number): void {
+    this.state = { ...this.state, currentPage: page };
+    this.ngZone.run(() => {
+      this.onPageChange.emit(page);
+      this.cdr.detectChanges();
+    });
+  }
+
+  onToggleViewMode(): void {
+    const newViewMode =
+      this.state.viewMode === 'single' ? 'continuous' : 'single';
+    this.state = { ...this.state, viewMode: newViewMode };
+    this.cdr.detectChanges();
+  }
+
+  onDownload(): void {
+    this._helper.downloadResource(this.effectiveDocumentUrl, this.fileName);
+  }
+
+  onOpenInNewTab(): void {
+    window.open(this.effectiveDocumentUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async onFullscreen(): Promise<void> {
+    if (!this.containerRef?.nativeElement) return;
+
+    try {
+      if (this.state.fullscreen) {
+        await exitFullscreen();
+      } else {
+        await enterFullscreen(this.containerRef.nativeElement);
+      }
+    } catch (error) {
+      this.errorBoundary.reportError(error as Error, 'Fullscreen operation');
+    }
+  }
+
+  // Legacy methods for backward compatibility
+  closeModal(): void {
+    this.isModalOpen = false;
+  }
+
+  openModal(): void {
+    this.isModalOpen = true;
+  }
+
+  downloadFile(): void {
+    this.onDownload();
+  }
+
+  upDateZoom(zoomType: string): void {
+    switch (zoomType) {
+      case 'increment':
+        this.onZoomIn();
+        break;
+      case 'decrement':
+        this.onZoomOut();
+        break;
+      default:
+        this.onZoomReset();
+        break;
+    }
+  }
+
+  rotateDoc(): void {
+    this.onRotateRight();
+  }
+
+  viewInFullScreen(): void {
+    this.openModal();
+  }
+
+  // Legacy getters for backward compatibility
+  get zoom_in(): number {
+    return this.state.zoom / 100;
+  }
+
+  set zoom_in(value: number) {
+    this.state.zoom = value * 100;
+  }
+
+  get rotation(): number {
+    return this.state.rotation;
+  }
+
+  set rotation(value: number) {
+    this.state.rotation = value;
+  }
+
+  get isArchieved(): boolean {
+    return !!this.state.error;
+  }
+
+  get pdfType(): string {
+    return CommonConstant.PDFTYPE;
+  }
+
+  get imageType(): string {
+    return CommonConstant.IMAGETYPE;
+  }
+
+  get inputModelRef(): any {
+    return null;
+  }
+
+  set inputModelRef(value: any) {
+    // Deprecated
   }
 }

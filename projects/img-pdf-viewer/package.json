@@ -1,13 +1,37 @@
 {
   "name": "img-pdf-viewer",
-  "version": "0.0.4",
+  "version": "1.0.4",
+  "description": "A powerful, responsive Angular library for viewing PDF documents and images (PNG, JPEG, WebP) with advanced features like zoom, rotation, and pagination. Built on PDF.js.",
+  "keywords": [
+    "angular",
+    "pdf-viewer",
+    "image-viewer",
+    "document-viewer",
+    "pdfjs",
+    "angular-component",
+    "typescript",
+    "ngx",
+    "preview",
+    "fast",
+    "responsive"
+  ],
+  "author": "Niranjan Kushwaha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NiranjanKushwaha/imgPdfViewer_library_Angular.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NiranjanKushwaha/imgPdfViewer_library_Angular/issues"
+  },
+  "homepage": "https://github.com/NiranjanKushwaha/imgPdfViewer_library_Angular#readme",
   "peerDependencies": {
-    "@angular/common": "^13.3.0",
-    "@angular/core": "^13.3.0",
-    "ng2-pdf-viewer": "^8.0.1",
-    "@ng-bootstrap/ng-bootstrap": "^12.0.0"
+    "@angular/common": ">=8.0.0 <20.0.0",
+    "@angular/core": ">=8.0.0 <20.0.0"
   },
   "dependencies": {
-    "tslib": "^2.3.0"
-  }
+    "tslib": "^2.0.0",
+    "pdfjs-dist": "^2.16.105"
+  },
+  "devDependencies": {}
 }

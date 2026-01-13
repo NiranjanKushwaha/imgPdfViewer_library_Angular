@@ -1,0 +1,396 @@
+.document-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #e2e8f0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.document-toolbar.embedded {
+  padding: 8px 12px;
+  gap: 6px;
+}
+
+.toolbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar-center {
+  flex: 0 0 auto;
+}
+
+.toolbar-right {
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+/* Page Navigation */
+.page-navigation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 60px;
+  justify-content: center;
+}
+
+.current-page {
+  color: white;
+}
+
+.separator {
+  color: #93c5fd;
+  margin: 0 2px;
+}
+
+.total-pages {
+  color: #93c5fd;
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-display {
+  min-width: 50px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+}
+
+/* Rotation Controls */
+.rotation-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Toolbar Buttons */
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+  color: #374151;
+  position: relative;
+  overflow: hidden;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.toolbar-btn i {
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Special button styles */
+.download-btn:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.new-tab-btn:hover:not(:disabled) {
+  background: #f3e8ff;
+  border-color: #c4b5fd;
+  color: #7c3aed;
+}
+
+.fullscreen-btn:hover:not(:disabled) {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  color: #d97706;
+}
+
+.view-mode-btn:hover:not(:disabled) {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+/* Divider */
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #d1d5db;
+  margin: 0 4px;
+}
+
+/* Filename Display */
+.filename-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.file-icon {
+  font-size: 12px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.filename {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .document-toolbar {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  
+  .toolbar-main {
+    gap: 8px;
+  }
+  
+  .toolbar-section {
+    gap: 4px;
+  }
+  
+  .toolbar-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .toolbar-btn i {
+    font-size: 12px;
+  }
+  
+  .page-info {
+    font-size: 11px;
+    padding: 3px 6px;
+    min-width: 50px;
+  }
+  
+  .zoom-display {
+    min-width: 40px;
+    font-size: 11px;
+  }
+  
+  .filename {
+    max-width: 200px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .toolbar-left,
+  .toolbar-right {
+    flex: none;
+    justify-content: center;
+  }
+  
+  .toolbar-center {
+    order: -1;
+  }
+  
+  .filename {
+    max-width: 100%;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .document-toolbar {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-bottom-color: #475569;
+  }
+  
+  .page-navigation,
+  .zoom-controls {
+    background: rgba(30, 41, 59, 0.8);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+  
+  .toolbar-btn {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: #475569;
+    color: #e2e8f0;
+  }
+  
+  .toolbar-btn:hover:not(:disabled) {
+    background: #374151;
+    border-color: #6b7280;
+  }
+  
+  .zoom-display {
+    background: #1e40af;
+    border-color: #3b82f6;
+    color: #dbeafe;
+  }
+  
+  .divider {
+    background: #475569;
+  }
+  
+  .filename-display {
+    background: rgba(30, 41, 59, 0.6);
+  }
+  
+  .filename {
+    color: #9ca3af;
+  }
+  
+  .file-icon {
+    color: #60a5fa;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .document-toolbar {
+    border-bottom-width: 2px;
+  }
+  
+  .toolbar-btn {
+    border-width: 2px;
+  }
+  
+  .page-navigation,
+  .zoom-controls {
+    border: 1px solid #000000;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-btn {
+    transition: none;
+  }
+  
+  .toolbar-btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (pointer: coarse) {
+  .toolbar-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+  
+  .toolbar-btn i {
+    font-size: 16px;
+  }
+}
+
+/* SVG Icon Styles */
+.svg-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+}
+
+.svg-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none; 
+  stroke: currentColor; 
+}
+
+.big-icon {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+  color: #94a3b8;
+}
+
+.file-icon {
+  width: 14px;
+  height: 14px;
+}

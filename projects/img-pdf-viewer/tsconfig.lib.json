@@ -6,7 +6,10 @@
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,
-    "types": []
+    "lib": ["es2020", "dom", "dom.iterable", "esnext"],
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   },
   "exclude": [
     "src/test.ts",

@@ -1,0 +1,307 @@
+.image-viewer-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: repeating-conic-gradient(#f3f4f6 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.loading-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.8);
+  z-index: 100;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  text-align: center;
+  color: #6b7280;
+}
+
+.loading-text p {
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.renderer-info {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.error-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #ffffff;
+  padding: 20px;
+}
+
+.error-content {
+  text-align: center;
+  max-width: 400px;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.error-content h3 {
+  color: #dc2626;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.error-content p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0 0 16px 0;
+}
+
+.troubleshooting-tips {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 16px 0;
+  text-align: left;
+}
+
+.tip-title {
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px 0;
+  font-size: 12px;
+}
+
+.troubleshooting-tips ul {
+  margin: 0;
+  padding-left: 16px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.troubleshooting-tips li {
+  margin: 4px 0;
+}
+
+.error-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.btn-outline:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.image-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 80vh; /* User suggested fix */
+  overflow: hidden;
+  cursor: default;
+}
+
+.image-content.dragging {
+  cursor: grabbing;
+}
+
+.image-element {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.image-element.zoomable {
+  cursor: move;
+}
+
+.image-element.dragging {
+  cursor: grabbing;
+}
+
+.image-info-overlay {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.pan-hint {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pan-icon {
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .image-viewer-container {
+    border-radius: 4px;
+  }
+  
+  .error-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+  }
+  
+  .image-info-overlay,
+  .pan-hint {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .image-viewer-container {
+    background: repeating-conic-gradient(#374151 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+  }
+  
+  .loading-container,
+  .error-container {
+    background: #111827;
+  }
+  
+  .loading-text {
+    color: #d1d5db;
+  }
+  
+  .error-content h3 {
+    color: #f87171;
+  }
+  
+  .error-content p {
+    color: #9ca3af;
+  }
+  
+  .troubleshooting-tips {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  
+  .tip-title {
+    color: #f3f4f6;
+  }
+  
+  .troubleshooting-tips ul {
+    color: #d1d5db;
+  }
+  
+  .image-element {
+    background: #1f2937;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .image-viewer-container {
+    border: 2px solid #000000;
+  }
+  
+  .btn-outline {
+    border-width: 2px;
+  }
+  
+  .image-element {
+    border: 1px solid #000000;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: none;
+  }
+  
+  .image-element {
+    transition: none;
+  }
+}
+
+/* Touch device optimizations */
+@media (pointer: coarse) {
+  .pan-hint {
+    display: none;
+  }
+  
+  .image-element.zoomable {
+    cursor: default;
+  }
+}
