@@ -55,7 +55,6 @@
         [viewMode]="state.viewMode"
         [height]="mergedConfig.embedded ? '100%' : 'calc(100% - 60px)'"
         [width]="'100%'"
-        [fullscreen]="state.fullscreen"
         (onLoad)="onDocumentLoad({ type: 'pdf', totalPages: $event.totalPages })"
         (onError)="onDocumentError($event)"
         (onPageChange)="updatePage($event)"

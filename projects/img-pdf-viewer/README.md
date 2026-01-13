@@ -1,286 +1,153 @@
-# Angular Document Viewer
+# Angular Image & PDF Viewer
 
-A modern, feature-rich Angular library for viewing PDF documents and images with advanced capabilities. Built with Angular 8-19+ compatibility and uses PDF.js directly for optimal performance.
+[![npm version](https://img.shields.io/npm/v/img-pdf-viewer.svg)](https://www.npmjs.com/package/img-pdf-viewer)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Downloads](https://img.shields.io/npm/dm/img-pdf-viewer.svg)](https://www.npmjs.com/package/img-pdf-viewer)
+[![StackBlitz](https://img.shields.io/badge/StackBlitz-Live%20Demo-orange.svg)](https://stackblitz.com/edit/img-pdf-viewer)
 
-## Features
+A **premium, highly customizable Angular library** for viewing PDF documents and images. Built with performance in mind using Mozilla's `pdf.js` engine, it offers a seamless "Google Drive-like" preview experience for your Angular applications.
 
-### 🚀 Core Features
-- **PDF & Image Support** - View PDFs and images (PNG, JPEG, GIF, WebP, SVG, BMP, TIFF)
-- **Advanced PDF Rendering** - Direct PDF.js integration with text selection and annotations
-- **Zoom & Pan** - Smooth zoom (50%-300%) with pan support for images
-- **Rotation** - Rotate documents in 90° increments
-- **Page Navigation** - Navigate through multi-page PDFs
-- **Fullscreen Mode** - Native fullscreen support
-- **Download Support** - Download documents with proper filename handling
-- **CORS Handling** - Automatic CORS proxy fallback for external documents
+---
 
-### 🎨 UI/UX Features
-- **Modern Design** - Clean, responsive interface with dark mode support
-- **Accessibility** - Full ARIA support and keyboard navigation
-- **Mobile Optimized** - Touch-friendly controls and responsive design
-- **Loading States** - Beautiful loading animations and progress indicators
-- **Error Handling** - Comprehensive error states with retry options
-- **Customizable** - Extensive configuration options
+## ✨ Features at a Glance
 
-### 🔧 Technical Features
-- **Angular 8-19+ Compatible** - Works with any Angular version from 8 to 19+
-- **TypeScript** - Full TypeScript support with comprehensive type definitions
-- **Memory Management** - Automatic blob URL cleanup to prevent memory leaks
-- **Performance** - Optimized rendering with lazy loading and efficient updates
-- **Error Boundaries** - Graceful error handling with fallback options
+| Feature             | Description                                                                   |
+| :------------------ | :---------------------------------------------------------------------------- |
+| **📄 Dual Mode**    | Smartly switches between **PDF** and **Image** viewing (PNG, JPG, WEBP, SVG). |
+| **🔍 Smart Zoom**   | Mouse-wheel zoom, pinch-to-zoom, and preset zoom levels (50% - 300%).         |
+| **🔄 Rotation**     | Rotate documents 90° clockwise or counter-clockwise on the fly.               |
+| **📱 Responsive**   | Logic that adapts to any screen size, mobile or desktop.                      |
+| **🖥️ Fullscreen**   | Native immersive mode for distraction-free reading.                           |
+| **⚡ Lazy Loading** | Efficient rendering of large PDFs using virtualization.                       |
+| **🛡️ Secure**       | Sandboxed rendering to prevent XSS and script injection.                      |
 
-## Installation
+---
+
+## 📦 Installation
+
+Install the library and its peer dependencies:
 
 ```bash
-npm install img-pdf-viewer
+npm install img-pdf-viewer @ng-bootstrap/ng-bootstrap @fortawesome/fontawesome-free
 ```
 
-### Peer Dependencies
+> [!IMPORTANT] > **Styling Requirements**
+> You **must** include the CSS files in your `angular.json` for the UI to render correctly:
 
-The library requires these peer dependencies:
-
-```bash
-npm install @ng-bootstrap/ng-bootstrap
+```json
+"styles": [
+  "node_modules/bootstrap/dist/css/bootstrap.min.css",
+  "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
+  "src/styles.css"
+]
 ```
 
-## Quick Start
+---
 
-### 1. Import the Module
+## 🚀 Quick Start Guide
+
+[![StackBlitz](https://img.shields.io/badge/StackBlitz-Live%20Demo-orange.svg)](https://stackblitz.com/edit/img-pdf-viewer)
+
+Follow these 4 simple steps to integrate the viewer into your app.
+
+### 1️⃣ Import the Module
+
+In your `app.module.ts`:
 
 ```typescript
-import { NgModule } from '@angular/core';
-import { ImgPdfViewerModule } from 'img-pdf-viewer';
+import { ImgPdfViewerModule } from "img-pdf-viewer";
 
 @NgModule({
   imports: [
-    ImgPdfViewerModule
+    ImgPdfViewerModule,
+    // ...
   ],
 })
 export class AppModule {}
 ```
 
-### 2. Basic Usage
+### 2️⃣ Define Configuration
 
-```html
-<ngx-imgPdf-viewer
-  [documentUrl]="documentUrl"
-  [title]="'My Document'"
-  (onLoad)="onDocumentLoad($event)"
-  (onError)="onDocumentError($event)">
-</ngx-imgPdf-viewer>
-```
+In your component (e.g., `app.component.ts`), set up the document URL and optional config:
 
 ```typescript
-export class AppComponent {
-  documentUrl = 'https://example.com/document.pdf';
-
-  onDocumentLoad(info: DocumentInfo) {
-    console.log('Document loaded:', info);
-  }
-
-  onDocumentError(error: string) {
-    console.error('Document error:', error);
-  }
-}
-```
-
-## Advanced Usage
-
-### Configuration Options
-
-```typescript
-import { DocumentViewerConfig } from 'img-pdf-viewer';
+import { DocumentViewerConfig } from "img-pdf-viewer";
 
 export class AppComponent {
+  // Your PDF or Image URL (can be from an API or local asset)
+  docUrl = "https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf";
+
+  // Customize the look and feel
   config: DocumentViewerConfig = {
     showToolbar: true,
-    showDownload: true,
     showZoom: true,
     showRotation: true,
-    showFullscreen: true,
-    showInNewTab: true,
-    showPagination: true,
-    showViewModeToggle: true,
-    height: '600px',
-    width: '100%',
-    embedded: false,
-    initialZoom: 100,
-    maxZoom: 300,
-    minZoom: 50,
-    viewMode: 'single', // 'single' | 'continuous'
-    modalSize: 'lg',
-    className: 'custom-viewer'
-  };
-}
-```
-
-### Complete Example
-
-```html
-<ngx-imgPdf-viewer
-  [documentUrl]="documentUrl"
-  [documentType]="documentType"
-  [title]="documentTitle"
-  [config]="config"
-  (onLoad)="onDocumentLoad($event)"
-  (onError)="onDocumentError($event)"
-  (onZoomChange)="onZoomChange($event)"
-  (onRotationChange)="onRotationChange($event)"
-  (onPageChange)="onPageChange($event)">
-</ngx-imgPdf-viewer>
-```
-
-```typescript
-export class AppComponent {
-  documentUrl = 'https://example.com/document.pdf';
-  documentType: DocumentType = 'pdf';
-  documentTitle = 'Important Document';
-  
-  config: DocumentViewerConfig = {
-    showToolbar: true,
     showDownload: true,
-    showZoom: true,
-    showRotation: true,
     showFullscreen: true,
-    height: '600px',
-    width: '100%',
     initialZoom: 100,
-    viewMode: 'single'
-  };
-
-  onDocumentLoad(info: DocumentInfo) {
-    console.log('Document loaded:', info);
-  }
-
-  onDocumentError(error: string) {
-    console.error('Document error:', error);
-  }
-
-  onZoomChange(zoom: number) {
-    console.log('Zoom changed to:', zoom);
-  }
-
-  onRotationChange(rotation: number) {
-    console.log('Rotation changed to:', rotation);
-  }
-
-  onPageChange(page: number) {
-    console.log('Page changed to:', page);
-  }
-}
-```
-
-## API Reference
-
-### Inputs
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `documentUrl` | `string` | **required** | URL of the document to display |
-| `documentType` | `DocumentType` | `undefined` | Type of document (auto-detected if not provided) |
-| `title` | `string` | `undefined` | Custom title for the document |
-| `config` | `DocumentViewerConfig` | `{}` | Configuration object |
-
-### Outputs
-
-| Event | Type | Description |
-|-------|------|-------------|
-| `onLoad` | `EventEmitter<DocumentInfo>` | Emitted when document loads successfully |
-| `onError` | `EventEmitter<string>` | Emitted when document fails to load |
-| `onZoomChange` | `EventEmitter<number>` | Emitted when zoom level changes |
-| `onRotationChange` | `EventEmitter<number>` | Emitted when rotation changes |
-| `onPageChange` | `EventEmitter<number>` | Emitted when page changes (PDF only) |
-
-### Types
-
-```typescript
-type DocumentType = 'pdf' | 'image' | 'unknown';
-
-interface DocumentInfo {
-  type: DocumentType;
-  totalPages?: number;
-  fileName?: string;
-  fileSize?: number;
-  dimensions?: {
-    width: number;
-    height: number;
+    viewMode: "single", // Options: 'single' | 'continuous'
   };
 }
+```
 
-interface DocumentViewerConfig {
-  showToolbar?: boolean;
-  showDownload?: boolean;
-  showZoom?: boolean;
-  showRotation?: boolean;
-  showFullscreen?: boolean;
-  showInNewTab?: boolean;
-  showPagination?: boolean;
-  showViewModeToggle?: boolean;
-  height?: string;
-  width?: string;
-  embedded?: boolean;
-  initialZoom?: number;
-  maxZoom?: number;
-  minZoom?: number;
-  viewMode?: 'single' | 'continuous';
-  modalSize?: 'sm' | 'md' | 'lg' | 'xl';
-  className?: string;
+### 3️⃣ Add to Template
+
+In your HTML (`app.component.html`), drop in the component:
+
+```html
+<div class="viewer-host">
+  <ngx-imgPdf-viewer [documentUrl]="docUrl" [config]="config" [title]="'Project Documentation'"> </ngx-imgPdf-viewer>
+</div>
+```
+
+### 4️⃣ Set Container Height
+
+> [!WARNING]
+> The viewer takes the height of its parent. If the parent has `0px` height, the viewer will be invisible!
+
+In `app.component.css`:
+
+```css
+.viewer-host {
+  height: 100vh; /* Make it full screen */
+  width: 100%;
+  border: 1px solid #ddd; /* Optional: adds a nice border */
 }
 ```
 
-## Browser Support
+---
 
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
+## 🛠️ Advanced Configuration
 
-## Migration from v0.x
+The `DocumentViewerConfig` interface allows you to granularly control the UI:
 
-The library maintains backward compatibility with the old API while providing modern features:
+| Property         | Type                       | Default    | Description                                                         |
+| :--------------- | :------------------------- | :--------- | :------------------------------------------------------------------ |
+| `showToolbar`    | `boolean`                  | `true`     | Show or hide the top toolbar.                                       |
+| `showZoom`       | `boolean`                  | `true`     | Enable zoom-in and zoom-out buttons.                                |
+| `showRotation`   | `boolean`                  | `true`     | Enable rotation controls.                                           |
+| `showDownload`   | `boolean`                  | `true`     | Allow users to download the source file.                            |
+| `showFullscreen` | `boolean`                  | `true`     | Enable the fullscreen toggle button.                                |
+| `viewMode`       | `'single' \| 'continuous'` | `'single'` | **Single**: Page-by-page. **Continuous**: Scroll through all pages. |
+| `initialZoom`    | `number`                   | `100`      | Start percentage for zoom.                                          |
 
-### Old API (Still Supported)
-```html
-<ngx-imgPdf-viewer
-  [documentURL]="url"
-  [docPreviewConfig]="config">
-</ngx-imgPdf-viewer>
-```
+---
 
-### New API (Recommended)
-```html
-<ngx-imgPdf-viewer
-  [documentUrl]="url"
-  [config]="config">
-</ngx-imgPdf-viewer>
-```
+## 🤝 Contribution
 
-## Troubleshooting
+We love open source! If you'd like to contribute:
 
-### PDF Not Loading
-1. Check if the PDF URL is accessible
-2. Verify CORS headers allow your domain
-3. Check console for specific error messages
-4. Try the fallback browser viewer
+1.  Fork the repo.
+2.  Create a branch (`git checkout -b feature/amazing-feature`).
+3.  Commit your changes.
+4.  Open a Pull Request.
 
-### Images Not Displaying
-1. Verify the image URL is valid
-2. Check if the image format is supported
-3. Ensure CORS headers are properly set
+## 📄 License
 
-### Performance Issues
-1. Use appropriate image sizes
-2. Consider lazy loading for large documents
-3. Monitor memory usage with blob URLs
+This project is licensed under the **MIT License** - see the LICENSE file for details.
 
-## Contributing
+---
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/NiranjanKushwaha">Niranjan Kushwaha</a>
+</p>

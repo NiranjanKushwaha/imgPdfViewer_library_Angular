@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
-import { DocumentViewerConfig, DocumentInfo } from 'projects/img-pdf-viewer/src/lib/types';
+import {
+  DocumentViewerConfig,
+  DocumentInfo,
+} from 'projects/img-pdf-viewer/src/lib/types';
 
 @Component({
   selector: 'app-root',
@@ -25,7 +28,7 @@ export class AppComponent {
     minZoom: 50,
     viewMode: 'single',
     modalSize: 'lg',
-    className: 'customClass'
+    className: 'customClass',
   };
 
   // Legacy configuration for backward compatibility
@@ -37,7 +40,8 @@ export class AppComponent {
   };
 
   //1. pdf url with .pdf extension
-  url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+  // url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+  url = '/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'; // Use local proxy to bypass CORS
 
   // 2. pdf url with no extension (should now work!)
   // url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy';
