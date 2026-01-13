@@ -156,6 +156,15 @@ export class PdfViewerComponent
   ) {}
 
   ngOnInit(): void {
+    // Set up PDF.js worker for out-of-the-box functionality
+    if (typeof window !== 'undefined' && 'Worker' in window) {
+      (
+        pdfjsLib as any
+      ).GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${
+        (pdfjsLib as any).version
+      }/build/pdf.worker.min.js`;
+    }
+
     this.initializePdf();
 
     // Listen for window resize events to handle DPR changes
