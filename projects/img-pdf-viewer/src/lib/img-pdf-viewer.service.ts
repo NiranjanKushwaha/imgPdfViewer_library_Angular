@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { DocumentType } from './types';
-import { 
-  downloadDocument, 
-  getFileName, 
-  detectDocumentType, 
+import {
+  downloadDocument,
+  getFileName,
+  detectDocumentType,
   isValidUrl,
   createBlobFromDataUrl,
-  revokeBlobUrl
+  revokeBlobUrl,
 } from './utils';
 
 @Injectable({
@@ -22,8 +22,6 @@ export class ImgPdfViewerService {
     const link = document.createElement('a');
     link.download = fileName;
     link.href = blob;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -32,9 +30,8 @@ export class ImgPdfViewerService {
   /**
    * Download a resource from URL
    */
-  downloadResource(url: string, fileName: string = ''): void {
+  async downloadResource(url: string, fileName: string = ''): Promise<void> {
     if (!url) {
-      console.warn('No URL provided for download');
       return;
     }
 
@@ -43,7 +40,7 @@ export class ImgPdfViewerService {
     }
 
     // Use the utility function for better error handling
-    downloadDocument(url, fileName);
+    await downloadDocument(url, fileName);
   }
 
   /**
@@ -67,7 +64,16 @@ export class ImgPdfViewerService {
     }
 
     const imageExtensions = [
-      'png', 'jpeg', 'jpg', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'ico', 'apng'
+      'png',
+      'jpeg',
+      'jpg',
+      'gif',
+      'webp',
+      'svg',
+      'bmp',
+      'tiff',
+      'ico',
+      'apng',
     ];
 
     if (extension === 'pdf') {
@@ -84,7 +90,6 @@ export class ImgPdfViewerService {
    */
   openBlobInNewWindow(url: string): void {
     if (!url) {
-      console.warn('No URL provided for opening in new window');
       return;
     }
 
@@ -119,7 +124,6 @@ export class ImgPdfViewerService {
         setTimeout(() => revokeBlobUrl(blobUrl), 1000);
       })
       .catch((error) => {
-        console.error('Failed to open blob in new window:', error);
         // Fallback: try to open the original URL
         window.open(url, '_blank', 'noopener,noreferrer');
       });
@@ -148,7 +152,6 @@ export class ImgPdfViewerService {
       const contentLength = response.headers.get('content-length');
       return contentLength ? parseInt(contentLength, 10) : null;
     } catch (error) {
-      console.warn('Could not determine file size:', error);
       return null;
     }
   }
@@ -161,7 +164,6 @@ export class ImgPdfViewerService {
       const response = await fetch(url, { method: 'HEAD' });
       return response.headers.get('content-type');
     } catch (error) {
-      console.warn('Could not determine MIME type:', error);
       return null;
     }
   }

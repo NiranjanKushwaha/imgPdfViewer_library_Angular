@@ -11,7 +11,7 @@ import {
   ElementRef,
   ChangeDetectorRef,
   NgZone,
-  HostListener
+  HostListener,
 } from '@angular/core';
 import { DocumentType, ImageInfo } from './types';
 import { ErrorBoundaryService } from './error-boundary.service';
@@ -20,7 +20,11 @@ import { isExternalUrl, tryLoadWithProxy } from './utils';
 @Component({
   selector: 'ngx-image-viewer',
   template: `
-    <div class="image-viewer-container" [style.height]="height" [style.width]="width">
+    <div
+      class="image-viewer-container"
+      [style.height]="height"
+      [style.width]="width"
+    >
       <!-- Loading State -->
       <div *ngIf="loading" class="loading-container">
         <div class="loading-spinner"></div>
@@ -31,7 +35,7 @@ import { isExternalUrl, tryLoadWithProxy } from './utils';
       </div>
 
       <!-- Error State -->
-      <div *ngIf="error && !loading" class="error-container">
+      <div *ngIf="error" class="error-container">
         <div class="error-content">
           <div class="error-icon">🖼️</div>
           <h3>Failed to Load Image</h3>
@@ -46,22 +50,29 @@ import { isExternalUrl, tryLoadWithProxy } from './utils';
           </div>
           <div class="error-actions">
             <button (click)="retry()" class="btn btn-outline">Retry</button>
-            <button (click)="openInNewTab()" class="btn btn-outline">Open in New Tab</button>
-            <button (click)="download()" class="btn btn-outline">Download</button>
+            <button (click)="openInNewTab()" class="btn btn-outline">
+              Open in New Tab
+            </button>
+            <button (click)="download()" class="btn btn-outline">
+              Download
+            </button>
           </div>
         </div>
       </div>
 
       <!-- Image Content -->
-      <div *ngIf="!loading && !error" class="image-content" 
-           [class.dragging]="isDragging"
-           (mousedown)="onMouseDown($event)"
-           (mousemove)="onMouseMove($event)"
-           (mouseup)="onMouseUp()"
-           (mouseleave)="onMouseUp()"
-           (wheel)="onWheel($event)">
-        
+      <div
+        *ngIf="!error"
+        class="image-content"
+        [class.dragging]="isDragging"
+        (mousedown)="onMouseDown($event)"
+        (mousemove)="onMouseMove($event)"
+        (mouseup)="onMouseUp()"
+        (mouseleave)="onMouseUp()"
+        (wheel)="onWheel($event)"
+      >
         <img
+          *ngIf="proxiedSrc"
           #imageElement
           [src]="proxiedSrc"
           [alt]="imageInfo?.alt || 'Document'"
@@ -92,7 +103,7 @@ import { isExternalUrl, tryLoadWithProxy } from './utils';
       </div>
     </div>
   `,
-  styleUrls: ['./image-viewer.component.css']
+  styleUrls: ['./image-viewer.component.css'],
 })
 export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
   @Input() src: string = '';
@@ -100,13 +111,15 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
   @Input() rotation: number = 0;
   @Input() height: string = '100%';
   @Input() width: string = '100%';
+  @Input() proxyUrl?: string;
 
   @Output() onLoad = new EventEmitter<ImageInfo>();
   @Output() onError = new EventEmitter<string>();
   @Output() onZoomChange = new EventEmitter<number>();
   @Output() onRotationChange = new EventEmitter<number>();
 
-  @ViewChild('imageElement', { static: false }) imageElement!: ElementRef<HTMLImageElement>;
+  @ViewChild('imageElement', { static: false })
+  imageElement!: ElementRef<HTMLImageElement>;
 
   loading = true;
   error: string | null = null;
@@ -168,7 +181,7 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
         this.isExternal = false;
       } else if (isExternalUrl(this.src)) {
         this.isExternal = true;
-        this.proxiedSrc = await tryLoadWithProxy(this.src);
+        this.proxiedSrc = await tryLoadWithProxy(this.src, this.proxyUrl);
       } else {
         this.proxiedSrc = this.src;
         this.isExternal = false;
@@ -176,7 +189,7 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
 
       // Detect image type
       this.imageType = this.detectImageType(this.src);
-
+      this.cdr.detectChanges();
     } catch (error) {
       this.setError(`Failed to load image: ${error}`);
     }
@@ -191,13 +204,13 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
 
   onImageLoad(event: Event): void {
     const img = event.target as HTMLImageElement;
-    
+
     if (img.naturalWidth > 0 && img.naturalHeight > 0) {
       this.imageInfo = {
         naturalWidth: img.naturalWidth,
         naturalHeight: img.naturalHeight,
         src: this.proxiedSrc,
-        alt: img.alt || 'Document'
+        alt: img.alt || 'Document',
       };
 
       this.loading = false;
@@ -207,18 +220,16 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
         this.onLoad.emit(this.imageInfo!);
         this.cdr.detectChanges();
       });
-
-      console.log('✅ Image loaded successfully:', img.naturalWidth, 'x', img.naturalHeight);
     } else {
       this.setError('Image has zero dimensions');
     }
   }
 
   onImageError(event: Event): void {
-    const errorMessage = this.src.startsWith('blob:') 
-      ? 'Invalid blob URL' 
+    const errorMessage = (this.proxiedSrc || this.src).startsWith('blob:')
+      ? 'Invalid blob URL'
       : 'Network error or unsupported format';
-    
+
     this.setError(`Failed to load image: ${errorMessage}`);
   }
 
@@ -227,7 +238,7 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
       this.isDragging = true;
       this.dragStart = {
         x: event.clientX - this.imagePosition.x,
-        y: event.clientY - this.imagePosition.y
+        y: event.clientY - this.imagePosition.y,
       };
       event.preventDefault();
     }
@@ -237,7 +248,7 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
     if (this.isDragging && this.zoom > 100) {
       this.imagePosition = {
         x: event.clientX - this.dragStart.x,
-        y: event.clientY - this.dragStart.y
+        y: event.clientY - this.dragStart.y,
       };
     }
   }
@@ -255,7 +266,7 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
       // Handle zoom with mouse wheel
       const delta = event.deltaY > 0 ? -10 : 10;
       const newZoom = Math.max(50, Math.min(300, this.zoom + delta));
-      
+
       if (newZoom !== this.zoom) {
         this.ngZone.run(() => {
           this.onZoomChange.emit(newZoom);
@@ -273,13 +284,15 @@ export class ImageViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   getImageTransform(): string {
-    return `scale(${this.zoom / 100}) rotate(${this.rotation}deg) translate(${this.imagePosition.x}px, ${this.imagePosition.y}px)`;
+    return `scale(${this.zoom / 100}) rotate(${this.rotation}deg) translate(${
+      this.imagePosition.x
+    }px, ${this.imagePosition.y}px)`;
   }
 
   private setError(message: string): void {
     this.loading = false;
     this.error = message;
-    
+
     this.ngZone.run(() => {
       this.onError.emit(message);
       this.cdr.detectChanges();

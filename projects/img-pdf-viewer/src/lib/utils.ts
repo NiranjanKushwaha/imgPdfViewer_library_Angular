@@ -20,8 +20,30 @@ export function detectDocumentType(url: string): DocumentType {
     case 'ico':
       return 'image';
     default:
-      // For URLs without extension, we'll detect based on content-type
-      // This will be handled by the async detection in the component
+      // Industrial Heuristics: Look for markers anywhere in the path
+      if (!url) return 'unknown';
+      const lowerUrl = url.toLowerCase().split('?')[0];
+
+      // PDF markers (very likely to be a PDF)
+      const isLikelyPdf =
+        lowerUrl.includes('/pdf') ||
+        lowerUrl.includes('pdf/') ||
+        lowerUrl.includes('=pdf') ||
+        lowerUrl.includes('format=pdf') ||
+        lowerUrl.includes('document/pdf');
+
+      if (isLikelyPdf) return 'pdf';
+
+      // Image markers (likely to be an image)
+      const isLikelyImage =
+        lowerUrl.includes('/image') ||
+        lowerUrl.includes('/img') ||
+        lowerUrl.includes('images/') ||
+        lowerUrl.includes('format=jpg') ||
+        lowerUrl.includes('format=png');
+
+      if (isLikelyImage) return 'image';
+
       return 'unknown';
   }
 }
@@ -29,160 +51,189 @@ export function detectDocumentType(url: string): DocumentType {
 /**
  * Detect document type from content-type header
  */
-export function detectDocumentTypeFromContentType(contentType: string): DocumentType {
+export function detectDocumentTypeFromContentType(
+  contentType: string
+): DocumentType {
   if (!contentType) return 'unknown';
-  
+
   const type = contentType.toLowerCase();
-  
+
   if (type.includes('application/pdf')) {
     return 'pdf';
   }
-  
+
   if (type.includes('image/')) {
     return 'image';
   }
-  
+
   return 'unknown';
 }
 
 /**
  * Detect document type by file signature using proxy
  */
-async function detectDocumentTypeBySignature(url: string): Promise<DocumentType> {
+async function detectDocumentTypeBySignature(
+  url: string,
+  proxyUrl?: string
+): Promise<DocumentType> {
   try {
-    const proxiedUrl = await tryLoadWithProxy(url);
+    const proxiedUrl = await tryLoadWithProxy(url, proxyUrl);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
+
     const response = await fetch(proxiedUrl, {
       method: 'GET',
       signal: controller.signal,
       headers: {
-        'Range': 'bytes=0-1023' // Only fetch first 1KB
-      }
+        Range: 'bytes=0-1023', // Only fetch first 1KB
+      },
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (response.ok) {
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      
+
       // Check for PDF signature (%PDF)
-      if (uint8Array.length >= 4 && 
-          uint8Array[0] === 0x25 && // %
-          uint8Array[1] === 0x50 && // P
-          uint8Array[2] === 0x44 && // D
-          uint8Array[3] === 0x46) { // F
-        console.log('✅ Detected PDF by signature');
+      if (
+        uint8Array.length >= 4 &&
+        uint8Array[0] === 0x25 && // %
+        uint8Array[1] === 0x50 && // P
+        uint8Array[2] === 0x44 && // D
+        uint8Array[3] === 0x46
+      ) {
+        // F
         return 'pdf';
       }
-      
+
       // Check for image signatures
       if (uint8Array.length >= 8) {
         // JPEG signature: FF D8 FF
-        if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8 && uint8Array[2] === 0xFF) {
-          console.log('✅ Detected JPEG by signature');
+        if (
+          uint8Array[0] === 0xff &&
+          uint8Array[1] === 0xd8 &&
+          uint8Array[2] === 0xff
+        ) {
           return 'image';
         }
-        
+
         // PNG signature: 89 50 4E 47 0D 0A 1A 0A
-        if (uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && 
-            uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
-          console.log('✅ Detected PNG by signature');
+        if (
+          uint8Array[0] === 0x89 &&
+          uint8Array[1] === 0x50 &&
+          uint8Array[2] === 0x4e &&
+          uint8Array[3] === 0x47
+        ) {
           return 'image';
         }
       }
     }
   } catch (error) {
-    console.log('⚠️ Signature detection failed:', error);
+    // Signature detection failed
   }
-  
+
   return 'unknown';
 }
 
 /**
  * Async document type detection using content-type header
  */
-export async function detectDocumentTypeAsync(url: string): Promise<DocumentType> {
+export async function detectDocumentTypeAsync(
+  url: string,
+  proxyUrl?: string
+): Promise<DocumentType> {
   // First try extension-based detection
   const extensionType = detectDocumentType(url);
   if (extensionType !== 'unknown') {
     return extensionType;
   }
-  
+
   // For URLs without extension, try to detect from content-type
   // First try direct access
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
+
     const response = await fetch(url, {
       method: 'HEAD',
       signal: controller.signal,
       mode: 'cors',
     });
-    
-    clearTimeout(timeoutId);
-    
+
     if (response.ok) {
       const contentType = response.headers.get('content-type');
       const detectedType = detectDocumentTypeFromContentType(contentType || '');
-      
+
       if (detectedType !== 'unknown') {
-        console.log(`✅ Detected document type from content-type (direct): ${detectedType} (${contentType})`);
         return detectedType;
       }
     }
   } catch (error) {
-    console.log('⚠️ Direct content-type detection failed, trying proxy:', error);
+    // Direct content-type detection failed
   }
-  
+
   // If direct access fails due to CORS, try with proxy
   try {
-    const proxiedUrl = await tryLoadWithProxy(url);
+    const proxiedUrl = proxyUrl
+      ? `${proxyUrl}${encodeURIComponent(url)}`
+      : await tryLoadWithProxy(url);
     if (proxiedUrl !== url) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       const response = await fetch(proxiedUrl, {
         method: 'HEAD',
         signal: controller.signal,
         mode: 'cors',
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (response.ok) {
         const contentType = response.headers.get('content-type');
-        const detectedType = detectDocumentTypeFromContentType(contentType || '');
-        
+        const detectedType = detectDocumentTypeFromContentType(
+          contentType || ''
+        );
+
         if (detectedType !== 'unknown') {
-          console.log(`✅ Detected document type from content-type (proxy): ${detectedType} (${contentType})`);
           return detectedType;
         }
       }
     }
   } catch (error) {
-    console.log('⚠️ Proxy content-type detection also failed:', error);
+    // Proxy content-type detection failed
   }
-  
+
   // Final fallback: try to detect by file signature using proxy
-  const signatureType = await detectDocumentTypeBySignature(url);
+  const signatureType = await detectDocumentTypeBySignature(url, proxyUrl);
   if (signatureType !== 'unknown') {
     return signatureType;
   }
-  
+
   return 'unknown';
 }
 
 /**
- * Extract file extension from URL
+ * Extract file extension from URL (segment-aware and parameters-safe)
  */
 export function getFileExtension(url: string): string {
-  const cleanUrl = url.split('?')[0]; // Remove query parameters
-  const parts = cleanUrl.split('.');
-  return parts.length > 1 ? parts[parts.length - 1] : '';
+  if (!url) return '';
+  try {
+    const urlWithoutParams = url.split('?')[0].split('#')[0];
+    const parts = urlWithoutParams.split('/');
+    const lastSegment = parts[parts.length - 1];
+    const dotIndex = lastSegment.lastIndexOf('.');
+    if (dotIndex > 0 && dotIndex < lastSegment.length - 1) {
+      return lastSegment.substring(dotIndex + 1).toLowerCase();
+    }
+  } catch (e) {
+    // Fallback to simple split if URL is weird
+    const cleanUrl = url.split('?')[0];
+    const pieces = cleanUrl.split('.');
+    if (pieces.length > 1) return pieces[pieces.length - 1].toLowerCase();
+  }
+  return '';
 }
 
 /**
@@ -249,7 +300,10 @@ export function isValidUrl(url: string): boolean {
 
   // As a last resort, try URL parsing with current origin if available
   try {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    const base =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'http://localhost';
     new URL(url, base);
     return true;
   } catch {
@@ -260,17 +314,35 @@ export function isValidUrl(url: string): boolean {
 /**
  * Create download link for a document
  */
-export function downloadDocument(url: string, filename?: string): void {
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename || getFileName(url);
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
+export async function downloadDocument(
+  url: string,
+  filename?: string
+): Promise<void> {
+  try {
+    // For cross-origin URLs, fetch as blob first
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch document: ${response.statusText}`);
+    }
 
-  // Append to body, click, and remove
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename || getFileName(url);
+
+    // Append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up blob URL after a delay
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+  } catch (error) {
+    // Fallback: open in new tab if download fails
+    window.open(url, '_blank');
+  }
 }
 
 /**
@@ -361,39 +433,22 @@ export function applyCorsProxy(url: string, proxyIndex = 0): string {
 /**
  * Try loading a URL through different CORS proxies
  */
-export async function tryLoadWithProxy(url: string): Promise<string> {
+export async function tryLoadWithProxy(
+  url: string,
+  customProxyUrl?: string
+): Promise<string> {
   // Skip for data URLs or internal URLs
   if (url.startsWith('data:') || !isExternalUrl(url)) {
     return url;
   }
 
-  // For images, try direct access first without CORS mode
-  const documentType = detectDocumentType(url);
-  if (documentType === 'image') {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-      const response = await fetch(url, {
-        method: 'HEAD',
-        signal: controller.signal,
-        // Don't use CORS mode for images - they usually work without it
-      });
-
-      clearTimeout(timeoutId);
-      if (response.ok) {
-        console.log('✅ Direct image access successful:', url);
-        return url;
-      }
-    } catch (e) {
-      console.log('⚠️ Direct image access failed, trying CORS mode:', e);
-    }
-  }
-
-  // Try direct URL with CORS mode first
+  // Smart Proxy Strategy:
+  // 1. Try direct URL with CORS mode first.
+  // 2. If it works, we don't need a proxy (avoiding proxy bottlenecks).
+  // 3. Only if direct fails, we use the user-provided proxy or public ones.
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // Quick check
 
     const response = await fetch(url, {
       method: 'HEAD',
@@ -403,11 +458,37 @@ export async function tryLoadWithProxy(url: string): Promise<string> {
 
     clearTimeout(timeoutId);
     if (response.ok) {
-      console.log('✅ Direct URL access successful:', url);
-      return url;
+      return url; // Directly accessible!
     }
   } catch (e) {
-    console.log('⚠️ Direct URL access failed, trying proxies:', e);
+    // Direct access failed, will proceed to proxy
+  }
+
+  // Use custom proxy if provided
+  if (customProxyUrl) {
+    return `${customProxyUrl}${encodeURIComponent(url)}`;
+  }
+
+  // For images, if custom proxy is NOT provided, we have one more trick:
+  // Try direct access WITHOUT CORS (img tags often work fine where fetch fails)
+  const documentType = detectDocumentType(url);
+  if (documentType === 'image') {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        return url;
+      }
+    } catch (e) {
+      // Direct non-CORS access failed
+    }
   }
 
   // Try each proxy with timeout
@@ -433,17 +514,14 @@ export async function tryLoadWithProxy(url: string): Promise<string> {
 
       clearTimeout(timeoutId);
       if (response.ok) {
-        console.log(`✅ Proxy ${i + 1} successful:`, proxiedUrl);
         return proxiedUrl;
       }
     } catch (e) {
-      console.log(`❌ Proxy ${i + 1} failed:`, e);
-      // Try next proxy
+      // Proxy failed
       continue;
     }
   }
 
-  console.log('❌ All proxies failed, returning original URL');
   // If all proxies fail, return the original URL
   return url;
 }
@@ -464,7 +542,6 @@ export function createBlobFromDataUrl(dataUrl: string): string | null {
     const blob = new Blob([array], { type: 'application/pdf' });
     return URL.createObjectURL(blob);
   } catch (error) {
-    console.error('Failed to convert data URL to blob URL:', error);
     return null;
   }
 }

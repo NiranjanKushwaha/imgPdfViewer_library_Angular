@@ -1,0 +1,15 @@
+<div class="modal-backdrop" *ngIf="isOpen" (click)="onBackdropClick($event)">
+  <div class="modal-content" [ngClass]="'modal-' + size">
+    <div class="modal-header" *ngIf="title">
+      <h3>{{ title }}</h3>
+      <button class="close-btn" (click)="onClose()">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <ng-content></ng-content>
+    </div>
+    
+    <!-- Optional Footer if needed -->
+    <!-- <div class="modal-footer"></div> -->
+  </div>
+</div>

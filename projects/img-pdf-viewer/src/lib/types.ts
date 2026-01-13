@@ -35,6 +35,10 @@ export interface DocumentViewerConfig {
   modalSize?: 'sm' | 'md' | 'lg' | 'xl';
   /** Custom style for modal */
   customStyle?: string;
+  /** Custom proxy URL to bypass CORS and help with type detection */
+  proxyUrl?: string;
+  /** Fallback document type if auto-detection fails */
+  fallbackType?: DocumentType;
 }
 
 export type DocumentType = 'pdf' | 'image' | 'unknown';

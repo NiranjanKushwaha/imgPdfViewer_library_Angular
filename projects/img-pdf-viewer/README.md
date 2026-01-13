@@ -11,15 +11,15 @@ A **premium, highly customizable Angular library** for viewing PDF documents and
 
 ## ✨ Features at a Glance
 
-| Feature             | Description                                                                   |
-| :------------------ | :---------------------------------------------------------------------------- |
-| **📄 Dual Mode**    | Smartly switches between **PDF** and **Image** viewing (PNG, JPG, WEBP, SVG). |
-| **🔍 Smart Zoom**   | Mouse-wheel zoom, pinch-to-zoom, and preset zoom levels (50% - 300%).         |
-| **🔄 Rotation**     | Rotate documents 90° clockwise or counter-clockwise on the fly.               |
-| **📱 Responsive**   | Logic that adapts to any screen size, mobile or desktop.                      |
-| **🖥️ Fullscreen**   | Native immersive mode for distraction-free reading.                           |
-| **⚡ Lazy Loading** | Efficient rendering of large PDFs using virtualization.                       |
-| **🛡️ Secure**       | Sandboxed rendering to prevent XSS and script injection.                      |
+| Feature            | Description                                                                   |
+| :----------------- | :---------------------------------------------------------------------------- |
+| **📄 Dual Mode**   | Smartly switches between **PDF** and **Image** viewing (PNG, JPG, WEBP, SVG). |
+| **🔍 Smart Zoom**  | Mouse-wheel zoom, pinch-to-zoom, and preset zoom levels (50% - 300%).         |
+| **🔄 Rotation**    | Rotate documents 90° clockwise or counter-clockwise on the fly.               |
+| **🛠️ Smart Proxy** | Industrial-grade strategy: direct access first, then "smart" proxy fallback.  |
+| **🧩 Heuristics**  | Detects doc types without extensions by analyzing URL path patterns.          |
+| **📱 Responsive**  | Logic that adapts to any screen size, mobile or desktop.                      |
+| **🖥️ Fullscreen**  | Native immersive mode for distraction-free reading.                           |
 
 ---
 
@@ -28,18 +28,7 @@ A **premium, highly customizable Angular library** for viewing PDF documents and
 Install the library and its peer dependencies:
 
 ```bash
-npm install img-pdf-viewer @ng-bootstrap/ng-bootstrap @fortawesome/fontawesome-free
-```
-
-> [!IMPORTANT] > **Styling Requirements**
-> You **must** include the CSS files in your `angular.json` for the UI to render correctly:
-
-```json
-"styles": [
-  "node_modules/bootstrap/dist/css/bootstrap.min.css",
-  "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
-  "src/styles.css"
-]
+npm install img-pdf-viewer
 ```
 
 ---
@@ -121,15 +110,18 @@ In `app.component.css`:
 
 The `DocumentViewerConfig` interface allows you to granularly control the UI:
 
-| Property         | Type                       | Default    | Description                                                         |
-| :--------------- | :------------------------- | :--------- | :------------------------------------------------------------------ |
-| `showToolbar`    | `boolean`                  | `true`     | Show or hide the top toolbar.                                       |
-| `showZoom`       | `boolean`                  | `true`     | Enable zoom-in and zoom-out buttons.                                |
-| `showRotation`   | `boolean`                  | `true`     | Enable rotation controls.                                           |
-| `showDownload`   | `boolean`                  | `true`     | Allow users to download the source file.                            |
-| `showFullscreen` | `boolean`                  | `true`     | Enable the fullscreen toggle button.                                |
-| `viewMode`       | `'single' \| 'continuous'` | `'single'` | **Single**: Page-by-page. **Continuous**: Scroll through all pages. |
-| `initialZoom`    | `number`                   | `100`      | Start percentage for zoom.                                          |
+| Property         | Type                       | Default     | Description                                                         |
+| :--------------- | :------------------------- | :---------- | :------------------------------------------------------------------ |
+| `showToolbar`    | `boolean`                  | `true`      | Show or hide the top toolbar.                                       |
+| `showZoom`       | `boolean`                  | `true`      | Enable zoom-in and zoom-out buttons.                                |
+| `showRotation`   | `boolean`                  | `true`      | Enable rotation controls.                                           |
+| `showDownload`   | `boolean`                  | `true`      | Allow users to download the source file.                            |
+| `showFullscreen` | `boolean`                  | `true`      | Enable the fullscreen toggle button.                                |
+| `viewMode`       | `'single' \| 'continuous'` | `'single'`  | **Single**: Page-by-page. **Continuous**: Scroll through all pages. |
+| `initialZoom`    | `number`                   | `100`       | Start percentage for zoom.                                          |
+| `proxyUrl`       | `string`                   | `undefined` | Custom proxy to bypass CORS (e.g., `https://corsproxy.io/?`).       |
+| `fallbackType`   | `'pdf' \| 'image'`         | `undefined` | Type to use if auto-detection fails for extensionless URLs.         |
+| `height`         | `string`                   | `'100vh'`   | Height of the viewer container.                                     |
 
 ---
 

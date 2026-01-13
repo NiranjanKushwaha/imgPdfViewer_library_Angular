@@ -3,13 +3,12 @@ import {
   Input,
   Output,
   EventEmitter,
-  OnInit,
-  OnChanges,
-  SimpleChanges,
-  ChangeDetectorRef
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { DocumentType, ViewerState, ToolbarAction } from './types';
 import { supportsPagination, supportsZoom, supportsRotation } from './utils';
+import { Icons } from './icons/icons.constant';
 
 @Component({
   selector: 'ngx-document-toolbar',
@@ -23,28 +22,39 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
           <div *ngIf="canPaginate" class="page-navigation">
             <button
               class="toolbar-btn"
-              [disabled]="state.currentPage <= 1 || state.viewMode === 'continuous'"
+              [disabled]="
+                state.currentPage <= 1 || state.viewMode === 'continuous'
+              "
               (click)="handlePreviousPage()"
               [attr.aria-label]="'Previous page'"
               title="Previous page"
             >
-              <i class="fas fa-chevron-left"></i>
+              <div
+                class="svg-icon"
+                [innerHTML]="icons.prevPage | safeHtml"
+              ></div>
             </button>
-            
+
             <div class="page-info">
               <span class="current-page">{{ state.currentPage || 1 }}</span>
               <span class="separator">/</span>
               <span class="total-pages">{{ state.totalPages || 1 }}</span>
             </div>
-            
+
             <button
               class="toolbar-btn"
-              [disabled]="state.currentPage >= state.totalPages || state.viewMode === 'continuous'"
+              [disabled]="
+                state.currentPage >= state.totalPages ||
+                state.viewMode === 'continuous'
+              "
               (click)="handleNextPage()"
               [attr.aria-label]="'Next page'"
               title="Next page"
             >
-              <i class="fas fa-chevron-right"></i>
+              <div
+                class="svg-icon"
+                [innerHTML]="icons.nextPage | safeHtml"
+              ></div>
             </button>
           </div>
 
@@ -53,10 +63,26 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
             *ngIf="documentType === 'pdf' && showViewModeToggle"
             class="toolbar-btn view-mode-btn"
             (click)="handleToggleViewMode()"
-            [attr.aria-label]="state.viewMode === 'single' ? 'Switch to continuous scroll' : 'Switch to single page'"
-            [title]="state.viewMode === 'single' ? 'Switch to continuous scroll' : 'Switch to single page'"
+            [attr.aria-label]="
+              state.viewMode === 'single'
+                ? 'Switch to continuous scroll'
+                : 'Switch to single page'
+            "
+            [title]="
+              state.viewMode === 'single'
+                ? 'Switch to continuous scroll'
+                : 'Switch to single page'
+            "
           >
-            <i class="fas" [class.fa-th-large]="state.viewMode === 'single'" [class.fa-list]="state.viewMode === 'continuous'"></i>
+            <div
+              class="svg-icon"
+              [innerHTML]="
+                (state.viewMode === 'single'
+                  ? icons.viewContinuous
+                  : icons.viewSingle
+                ) | safeHtml
+              "
+            ></div>
           </button>
         </div>
 
@@ -70,9 +96,12 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
               [attr.aria-label]="'Zoom out'"
               title="Zoom out"
             >
-              <i class="fas fa-minus"></i>
+              <div
+                class="svg-icon"
+                [innerHTML]="icons.zoomOut | safeHtml"
+              ></div>
             </button>
-            
+
             <button
               class="toolbar-btn zoom-display"
               (click)="handleZoomReset()"
@@ -81,7 +110,7 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
             >
               {{ Math.round(state.zoom) }}%
             </button>
-            
+
             <button
               class="toolbar-btn"
               [disabled]="state.zoom >= 300"
@@ -89,7 +118,7 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
               [attr.aria-label]="'Zoom in'"
               title="Zoom in"
             >
-              <i class="fas fa-plus"></i>
+              <div class="svg-icon" [innerHTML]="icons.zoomIn | safeHtml"></div>
             </button>
           </div>
         </div>
@@ -104,21 +133,34 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
               [attr.aria-label]="'Rotate left'"
               title="Rotate left"
             >
-              <i class="fas fa-undo"></i>
+              <div
+                class="svg-icon"
+                [innerHTML]="icons.rotateLeft | safeHtml"
+              ></div>
             </button>
-            
+
             <button
               class="toolbar-btn"
               (click)="handleRotateRight()"
               [attr.aria-label]="'Rotate right'"
               title="Rotate right"
             >
-              <i class="fas fa-redo"></i>
+              <div
+                class="svg-icon"
+                [innerHTML]="icons.rotateRight | safeHtml"
+              ></div>
             </button>
           </div>
 
           <!-- Divider -->
-          <div *ngIf="canRotate && showRotation && (showDownload || showInNewTab || showFullscreen)" class="divider"></div>
+          <div
+            *ngIf="
+              canRotate &&
+              showRotation &&
+              (showDownload || showInNewTab || showFullscreen)
+            "
+            class="divider"
+          ></div>
 
           <!-- Download button -->
           <button
@@ -128,7 +170,7 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
             [attr.aria-label]="'Download document'"
             title="Download document"
           >
-            <i class="fas fa-download"></i>
+            <div class="svg-icon" [innerHTML]="icons.download | safeHtml"></div>
           </button>
 
           <!-- Open in new tab button -->
@@ -139,7 +181,10 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
             [attr.aria-label]="'Open in new tab'"
             title="Open in new tab"
           >
-            <i class="fas fa-external-link-alt"></i>
+            <div
+              class="svg-icon"
+              [innerHTML]="icons.externalLink | safeHtml"
+            ></div>
           </button>
 
           <!-- Fullscreen button -->
@@ -147,38 +192,56 @@ import { supportsPagination, supportsZoom, supportsRotation } from './utils';
             *ngIf="showFullscreen"
             class="toolbar-btn fullscreen-btn"
             (click)="handleFullscreen()"
-            [attr.aria-label]="state.fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+            [attr.aria-label]="
+              state.fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'
+            "
             [title]="state.fullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
           >
-            <i class="fas" [class.fa-expand]="!state.fullscreen" [class.fa-compress]="state.fullscreen"></i>
+            <div
+              class="svg-icon"
+              [innerHTML]="
+                (state.fullscreen ? icons.fullscreenExit : icons.fullscreen)
+                  | safeHtml
+              "
+            ></div>
           </button>
         </div>
       </div>
 
       <!-- Filename display -->
       <div *ngIf="state.documentInfo && !embedded" class="filename-display">
-        <i class="fas fa-file-alt file-icon"></i>
-        <span class="filename" [title]="state.documentInfo.fileName || 'Document'">
+        <div
+          class="svg-icon file-icon"
+          [innerHTML]="icons.file | safeHtml"
+        ></div>
+        <span
+          class="filename"
+          [title]="state.documentInfo.fileName || 'Document'"
+        >
           {{ state.documentInfo.fileName || 'Document' }}
         </span>
       </div>
     </div>
   `,
-  styleUrls: ['./toolbar.component.css']
+  styleUrls: ['./toolbar.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ToolbarComponent implements OnInit, OnChanges {
+export class ToolbarComponent {
   @Input() state!: ViewerState;
-  @Input() documentType!: DocumentType;
-  @Input() showDownload: boolean = true;
-  @Input() showInNewTab: boolean = true;
-  @Input() showZoom: boolean = true;
-  @Input() showRotation: boolean = true;
-  @Input() showFullscreen: boolean = true;
-  @Input() showViewModeToggle: boolean = true;
-  @Input() embedded: boolean = false;
+  @Input() documentType: DocumentType = 'unknown';
+  @Input() embedded = false;
+
+  // Feature flags
+  @Input() showDownload = true;
+  @Input() showInNewTab = true;
+  @Input() showZoom = true;
+  @Input() showRotation = true;
+  @Input() showFullscreen = true;
+  @Input() showViewModeToggle = true;
 
   @Output() onDownload = new EventEmitter<void>();
   @Output() onOpenInNewTab = new EventEmitter<void>();
+  @Output() onPrint = new EventEmitter<void>();
   @Output() onZoomIn = new EventEmitter<void>();
   @Output() onZoomOut = new EventEmitter<void>();
   @Output() onZoomReset = new EventEmitter<void>();
@@ -189,32 +252,24 @@ export class ToolbarComponent implements OnInit, OnChanges {
   @Output() onFullscreen = new EventEmitter<void>();
   @Output() onToggleViewMode = new EventEmitter<void>();
 
-  canZoom = false;
-  canRotate = false;
-  canPaginate = false;
-  Math = Math; // Make Math available in template
+  Math = Math;
+  icons = Icons;
 
   constructor(private cdr: ChangeDetectorRef) {}
 
-  ngOnInit(): void {
-    this.updateCapabilities();
+  get canZoom(): boolean {
+    return supportsZoom(this.documentType);
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['documentType'] || changes['state']) {
-      this.updateCapabilities();
-    }
+  get canRotate(): boolean {
+    return supportsRotation(this.documentType);
   }
 
-  private updateCapabilities(): void {
-    if (this.documentType) {
-      this.canZoom = supportsZoom(this.documentType);
-      this.canRotate = supportsRotation(this.documentType);
-      this.canPaginate = supportsPagination(this.documentType);
-    }
+  get canPaginate(): boolean {
+    return supportsPagination(this.documentType);
   }
 
-  // Event handlers
+  // Handlers
   handleDownload(): void {
     this.onDownload.emit();
   }
@@ -244,11 +299,15 @@ export class ToolbarComponent implements OnInit, OnChanges {
   }
 
   handlePreviousPage(): void {
-    this.onPreviousPage.emit();
+    if (this.state.currentPage > 1) {
+      this.onPreviousPage.emit();
+    }
   }
 
   handleNextPage(): void {
-    this.onNextPage.emit();
+    if (this.state.currentPage < this.state.totalPages) {
+      this.onNextPage.emit();
+    }
   }
 
   handleFullscreen(): void {

@@ -1,4 +1,14 @@
-<div
+<!-- Custom Modal Wrapper -->
+<lib-custom-modal
+  [isOpen]="isModalOpen"
+  [size]="mergedConfig.modalSize || 'lg'"
+  [title]="fileName"
+  (close)="closeModal()"
+>
+  <ng-container *ngTemplateOutlet="viewerContent"></ng-container>
+</lib-custom-modal>
+
+<div *ngIf="!isModalOpen"
   #containerRef
   class="document-viewer-container"
   [class.fullscreen]="state.fullscreen"
@@ -7,127 +17,137 @@
   [style.width]="mergedConfig.width"
   [ngClass]="mergedConfig.className"
 >
-  <!-- No Document State -->
-  <div *ngIf="!effectiveDocumentUrl" class="no-document-state">
-    <div class="no-document-content">
-      <i class="fas fa-file-alt no-document-icon"></i>
-      <h3>No Document Found</h3>
-      <p>Please provide a document URL to preview</p>
-    </div>
-  </div>
-
-  <!-- Document Content -->
-  <div *ngIf="effectiveDocumentUrl" class="document-content">
-    <!-- Toolbar -->
-    <ngx-document-toolbar
-      *ngIf="mergedConfig.showToolbar && !mergedConfig.embedded"
-      [state]="state"
-      [documentType]="detectedDocumentType"
-      [showDownload]="mergedConfig.showDownload"
-      [showInNewTab]="mergedConfig.showInNewTab"
-      [showZoom]="mergedConfig.showZoom"
-      [showRotation]="mergedConfig.showRotation"
-      [showFullscreen]="mergedConfig.showFullscreen"
-      [showViewModeToggle]="mergedConfig.showViewModeToggle"
-      [embedded]="mergedConfig.embedded"
-      (onDownload)="onDownload()"
-      (onOpenInNewTab)="onOpenInNewTab()"
-      (onZoomIn)="onZoomIn()"
-      (onZoomOut)="onZoomOut()"
-      (onZoomReset)="onZoomReset()"
-      (onRotateLeft)="onRotateLeft()"
-      (onRotateRight)="onRotateRight()"
-      (onPreviousPage)="onPreviousPage()"
-      (onNextPage)="onNextPage()"
-      (onFullscreen)="onFullscreen()"
-      (onToggleViewMode)="onToggleViewMode()"
-    ></ngx-document-toolbar>
-
-    <!-- Document Viewer -->
-    <div class="viewer-container">
-      <!-- PDF Viewer -->
-      <ngx-pdf-viewer
-        *ngIf="detectedDocumentType === 'pdf' && !state.error"
-        [src]="effectiveDocumentUrl"
-        [currentPage]="state.currentPage"
-        [zoom]="state.zoom"
-        [rotation]="state.rotation"
-        [viewMode]="state.viewMode"
-        [height]="mergedConfig.embedded ? '100%' : 'calc(100% - 60px)'"
-        [width]="'100%'"
-        (onLoad)="onDocumentLoad({ type: 'pdf', totalPages: $event.totalPages })"
-        (onError)="onDocumentError($event)"
-        (onPageChange)="updatePage($event)"
-      ></ngx-pdf-viewer>
-
-      <!-- Image Viewer -->
-      <ngx-image-viewer
-        *ngIf="detectedDocumentType === 'image' && !state.error"
-        [src]="effectiveDocumentUrl"
-        [zoom]="state.zoom"
-        [rotation]="state.rotation"
-        [height]="mergedConfig.embedded ? '100%' : 'calc(100% - 60px)'"
-        [width]="'100%'"
-        (onLoad)="onDocumentLoad({ type: 'image', fileName: $event.alt, dimensions: { width: $event.naturalWidth, height: $event.naturalHeight } })"
-        (onError)="onDocumentError($event)"
-        (onZoomChange)="updateZoom($event)"
-        (onRotationChange)="updateRotation($event)"
-      ></ngx-image-viewer>
-
-      <!-- Unsupported Document Type -->
-      <div *ngIf="detectedDocumentType === 'unknown' && !state.loading" class="unsupported-state">
-        <div class="unsupported-content">
-          <i class="fas fa-question-circle unsupported-icon"></i>
-          <h3>Unsupported Document Type</h3>
-          <p>This document format is not supported for preview</p>
-          <div class="unsupported-actions">
-            <button class="btn btn-primary" (click)="onDownload()">
-              <i class="fas fa-download btn-icon"></i>
-              Download to view
-            </button>
-            <button class="btn btn-secondary" (click)="onOpenInNewTab()">
-              <i class="fas fa-external-link-alt btn-icon"></i>
-              Open in new tab
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Error State -->
-      <div *ngIf="state.error" class="error-state">
-        <div class="error-content">
-          <i class="fas fa-exclamation-triangle error-icon"></i>
-          <h3>Failed to Load Document</h3>
-          <p>{{ state.error }}</p>
-          <div class="error-actions">
-            <button class="btn btn-primary" (click)="initializeViewer()">
-              <i class="fas fa-redo btn-icon"></i>
-              Retry
-            </button>
-            <button class="btn btn-secondary" (click)="onOpenInNewTab()">
-              <i class="fas fa-external-link-alt btn-icon"></i>
-              Open in new tab
-            </button>
-            <button class="btn btn-secondary" (click)="onDownload()">
-              <i class="fas fa-download btn-icon"></i>
-              Download
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      <div *ngIf="state.loading" class="loading-state">
-        <div class="loading-content">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">
-            <p>Loading document...</p>
-            <p *ngIf="state.documentInfo" class="document-info">
-              {{ state.documentInfo.fileName }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <ng-container *ngTemplateOutlet="viewerContent"></ng-container>
 </div>
+
+
+<!-- Reusable Viewer Content -->
+<ng-template #viewerContent>
+  <div [class.in-modal]="isModalOpen">
+    <!-- No Document State -->
+    <div *ngIf="!effectiveDocumentUrl" class="no-document-state">
+      <div class="no-document-content">
+        <div class="svg-icon big-icon" [innerHTML]="icons.noDocument | safeHtml"></div>
+        <h3>No Document Found</h3>
+        <p>Please provide a document URL to preview</p>
+      </div>
+    </div>
+
+    <!-- Document Content -->
+    <div *ngIf="effectiveDocumentUrl" class="document-content">
+      <!-- Toolbar -->
+      <ngx-document-toolbar
+        *ngIf="mergedConfig.showToolbar"
+        [state]="state"
+        [documentType]="detectedDocumentType"
+        [showDownload]="mergedConfig.showDownload"
+        [showInNewTab]="mergedConfig.showInNewTab"
+        [showZoom]="mergedConfig.showZoom"
+        [showRotation]="mergedConfig.showRotation"
+        [showFullscreen]="mergedConfig.showFullscreen"
+        [showViewModeToggle]="mergedConfig.showViewModeToggle"
+        [embedded]="mergedConfig.embedded"
+        (onDownload)="onDownload()"
+        (onOpenInNewTab)="onOpenInNewTab()"
+        (onZoomIn)="onZoomIn()"
+        (onZoomOut)="onZoomOut()"
+        (onZoomReset)="onZoomReset()"
+        (onRotateLeft)="onRotateLeft()"
+        (onRotateRight)="onRotateRight()"
+        (onPreviousPage)="onPreviousPage()"
+        (onNextPage)="onNextPage()"
+        (onFullscreen)="onFullscreen()"
+        (onToggleViewMode)="onToggleViewMode()"
+      ></ngx-document-toolbar>
+
+      <!-- Document Viewer -->
+      <div class="viewer-container">
+        <!-- PDF Viewer -->
+        <ngx-pdf-viewer
+          *ngIf="detectedDocumentType === 'pdf' && !state.error"
+          [src]="effectiveDocumentUrl"
+          [currentPage]="state.currentPage"
+          [zoom]="state.zoom"
+          [rotation]="state.rotation"
+          [viewMode]="state.viewMode"
+          [height]="mergedConfig.embedded ? '100%' : 'calc(100% - 60px)'"
+          [width]="'100%'"
+          [proxyUrl]="mergedConfig.proxyUrl"
+          (onLoad)="onDocumentLoad({ type: 'pdf', totalPages: $event.totalPages })"
+          (onError)="onDocumentError($event)"
+          (onPageChange)="updatePage($event)"
+        ></ngx-pdf-viewer>
+
+        <!-- Image Viewer -->
+        <ngx-image-viewer
+          *ngIf="detectedDocumentType === 'image' && !state.error"
+          [src]="effectiveDocumentUrl"
+          [zoom]="state.zoom"
+          [rotation]="state.rotation"
+          [height]="mergedConfig.embedded ? '100%' : 'calc(100% - 60px)'"
+          [width]="'100%'"
+          [proxyUrl]="mergedConfig.proxyUrl"
+          (onLoad)="onDocumentLoad({ type: 'image', fileName: $event.alt, dimensions: { width: $event.naturalWidth, height: $event.naturalHeight } })"
+          (onError)="onDocumentError($event)"
+          (onZoomChange)="updateZoom($event)"
+          (onRotationChange)="updateRotation($event)"
+        ></ngx-image-viewer>
+
+        <!-- Unsupported Document Type -->
+        <div *ngIf="detectedDocumentType === 'unknown' && !state.loading" class="unsupported-state">
+          <div class="unsupported-content">
+            <div class="svg-icon big-icon" [innerHTML]="icons.unsupported | safeHtml"></div>
+            <h3>Unsupported Document Type</h3>
+            <p>This document format is not supported for preview</p>
+            <div class="unsupported-actions">
+              <button class="btn btn-primary" (click)="onDownload()">
+                <div class="svg-icon btn-icon" [innerHTML]="icons.download | safeHtml"></div>
+                Download to view
+              </button>
+              <button class="btn btn-secondary" (click)="onOpenInNewTab()">
+                 <div class="svg-icon btn-icon" [innerHTML]="icons.externalLink | safeHtml"></div>
+                Open in new tab
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="state.error" class="error-state">
+          <div class="error-content">
+            <div class="svg-icon big-icon" [innerHTML]="icons.error | safeHtml"></div>
+            <h3>Failed to Load Document</h3>
+            <p>{{ state.error }}</p>
+            <div class="error-actions">
+              <button class="btn btn-primary" (click)="initializeViewer()">
+                <div class="svg-icon btn-icon" [innerHTML]="icons.retry | safeHtml"></div>
+                Retry
+              </button>
+              <button class="btn btn-secondary" (click)="onOpenInNewTab()">
+                <div class="svg-icon btn-icon" [innerHTML]="icons.externalLink | safeHtml"></div>
+                Open in new tab
+              </button>
+              <button class="btn btn-secondary" (click)="onDownload()">
+                <div class="svg-icon btn-icon" [innerHTML]="icons.download | safeHtml"></div>
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="state.loading" class="loading-state">
+          <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">
+              <p>Loading document...</p>
+              <p *ngIf="state.documentInfo" class="document-info">
+                {{ state.documentInfo.fileName }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>

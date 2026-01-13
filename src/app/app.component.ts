@@ -24,6 +24,8 @@ export class AppComponent {
     width: '100%',
     embedded: false,
     initialZoom: 100,
+    proxyUrl: 'https://api.allorigins.win/raw?url=', // Use a proxy for detection and loading
+    fallbackType: 'pdf', // Best practice: provide a fallback for extensionless, CORS-blocked URLs
     maxZoom: 300,
     minZoom: 50,
     viewMode: 'single',
@@ -40,23 +42,12 @@ export class AppComponent {
   };
 
   //1. pdf url with .pdf extension
-  // url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
-  url = '/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'; // Use local proxy to bypass CORS
-
-  // 2. pdf url with no extension (should now work!)
-  // url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy';
-
-  //1. image url with .jpg extension (should work without proxy)
-  // url = 'https://www.interactivesearchmarketing.com/wp-content/uploads/2014/06/png-vs-jpeg.jpg';
-
+  // url ='https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
   // No document sending
-  // url = '';
+  url = 'https://ontheline.trincoll.edu/images/bookdown/sample-local-pdf.pdf';
+  // url ='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFSERbH3Dpcac1lp6FR0TybEDnoMeZ-vHxUQ&s';
 
-  onDocumentLoad(info: DocumentInfo): void {
-    console.log('Document loaded successfully:', info);
-  }
+  onDocumentLoad(info: DocumentInfo): void {}
 
-  onDocumentError(error: string): void {
-    console.error('Document loading error:', error);
-  }
+  onDocumentError(error: string): void {}
 }

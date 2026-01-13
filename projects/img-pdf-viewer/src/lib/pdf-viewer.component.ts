@@ -10,27 +10,44 @@ import {
   ViewChild,
   ElementRef,
   ChangeDetectorRef,
-  NgZone
+  NgZone,
+  AfterViewInit,
+  ViewChildren,
+  QueryList,
 } from '@angular/core';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import { DocumentType, PDFPageInfo, ErrorInfo } from './types';
 import { ErrorBoundaryService } from './error-boundary.service';
-import { isExternalUrl, tryLoadWithProxy, createBlobFromDataUrl, revokeBlobUrl } from './utils';
+import {
+  isExternalUrl,
+  tryLoadWithProxy,
+  createBlobFromDataUrl,
+  revokeBlobUrl,
+} from './utils';
 import { defaultPdfOptions } from './pdf-config';
 
 @Component({
   selector: 'ngx-pdf-viewer',
   template: `
-    <div class="pdf-viewer-container" [class.fullscreen]="fullscreen" [style.height]="height" [style.width]="width">
+    <div
+      class="pdf-viewer-container"
+      [class.fullscreen]="fullscreen"
+      [style.height]="height"
+      [style.width]="width"
+    >
       <!-- Loading State -->
       <div *ngIf="loading" class="loading-container">
         <div class="loading-spinner"></div>
         <div class="loading-text">
           <p>Loading PDF...</p>
-          <p *ngIf="totalPages > 0" class="page-info">Page {{ currentPage }} of {{ totalPages }}</p>
+          <p *ngIf="totalPages > 0" class="page-info">
+            Page {{ currentPage }} of {{ totalPages }}
+          </p>
           <p class="renderer-info">Using PDF.js renderer</p>
-          <p *ngIf="isExternal" class="proxy-info">Trying CORS proxies for external document...</p>
+          <p *ngIf="isExternal" class="proxy-info">
+            Trying CORS proxies for external document...
+          </p>
         </div>
       </div>
 
@@ -41,27 +58,31 @@ import { defaultPdfOptions } from './pdf-config';
           <h3>Failed to Load PDF</h3>
           <p>{{ error }}</p>
           <div *ngIf="isCorsError" class="cors-tip">
-            <strong>Tip:</strong> This PDF is hosted on a server that doesn't allow cross-origin access. 
-            You can try opening it in a new tab or downloading it directly.
+            <strong>Tip:</strong> This PDF is hosted on a server that doesn't
+            allow cross-origin access. You can try opening it in a new tab or
+            downloading it directly.
           </div>
           <div class="error-actions">
             <button (click)="retry()" class="btn btn-outline">Retry</button>
-            <button (click)="openInNewTab()" class="btn btn-outline">Open in New Tab</button>
-            <button (click)="download()" class="btn btn-outline">Download</button>
+            <button (click)="openInNewTab()" class="btn btn-outline">
+              Open in New Tab
+            </button>
+            <button (click)="download()" class="btn btn-outline">
+              Download
+            </button>
           </div>
         </div>
       </div>
 
       <!-- PDF Content -->
-      <div *ngIf="!loading && !error" class="pdf-content" [class.continuous]="viewMode === 'continuous'">
+      <div
+        *ngIf="!loading && !error"
+        class="pdf-content"
+        [class.continuous]="viewMode === 'continuous'"
+      >
         <!-- Single Page Mode -->
         <div *ngIf="viewMode === 'single'" class="single-page-container">
-          <canvas
-            #pdfCanvas
-            class="pdf-canvas"
-            [style.transform]="'rotate(' + rotation + 'deg)'"
-            [style.transform-origin]="'center'"
-          ></canvas>
+          <canvas #pdfCanvas class="pdf-canvas"></canvas>
         </div>
 
         <!-- Continuous Mode -->
@@ -71,26 +92,26 @@ import { defaultPdfOptions } from './pdf-config';
             class="page-container"
             [class.loaded]="loadedPages.has(i + 1)"
           >
-            <canvas
-              #pageCanvas
-              class="pdf-canvas page-canvas"
-              [style.transform]="'rotate(' + rotation + 'deg)'"
-              [style.transform-origin]="'center'"
-            ></canvas>
+            <canvas #pageCanvas class="pdf-canvas page-canvas"></canvas>
             <div class="page-number">{{ i + 1 }}</div>
           </div>
         </div>
       </div>
 
       <!-- Page Info Overlay (Single Page Mode) -->
-      <div *ngIf="!loading && !error && viewMode === 'single' && totalPages > 0" class="page-info-overlay">
+      <div
+        *ngIf="!loading && !error && viewMode === 'single' && totalPages > 0"
+        class="page-info-overlay"
+      >
         {{ currentPage }} / {{ totalPages }}
       </div>
     </div>
   `,
-  styleUrls: ['./pdf-viewer.component.css']
+  styleUrls: ['./pdf-viewer.component.css'],
 })
-export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
+export class PdfViewerComponent
+  implements OnInit, OnDestroy, OnChanges, AfterViewInit
+{
   @Input() src: string = '';
   @Input() currentPage: number = 1;
   @Input() zoom: number = 100;
@@ -99,12 +120,17 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   @Input() height: string = '100%';
   @Input() width: string = '100%';
   @Input() fullscreen: boolean = false;
+  @Input() proxyUrl?: string;
 
   @Output() onLoad = new EventEmitter<{ totalPages: number }>();
   @Output() onError = new EventEmitter<string>();
   @Output() onPageChange = new EventEmitter<number>();
 
-  @ViewChild('pdfCanvas', { static: false }) pdfCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('pdfCanvas', { static: false })
+  pdfCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChildren('pageCanvas') pageCanvases!: QueryList<
+    ElementRef<HTMLCanvasElement>
+  >;
 
   loading = true;
   error: string | null = null;
@@ -131,9 +157,17 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnInit(): void {
     this.initializePdf();
-    
+
     // Listen for window resize events to handle DPR changes
     window.addEventListener('resize', this.onWindowResize.bind(this));
+  }
+
+  ngAfterViewInit(): void {
+    this.pageCanvases.changes.subscribe(() => {
+      if (this.viewMode === 'continuous' && !this.loading && this.pdfDocument) {
+        this.renderAllPages();
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -144,13 +178,29 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       this.renderCurrentPage();
     }
     if (changes['zoom'] && !changes['zoom'].firstChange) {
-      this.renderCurrentPage();
+      if (this.viewMode === 'continuous') {
+        this.renderAllPages();
+      } else {
+        this.renderCurrentPage();
+      }
     }
     if (changes['rotation'] && !changes['rotation'].firstChange) {
-      this.renderCurrentPage();
+      if (this.viewMode === 'continuous') {
+        this.renderAllPages();
+      } else {
+        this.renderCurrentPage();
+      }
     }
     if (changes['viewMode'] && !changes['viewMode'].firstChange) {
-      this.renderAllPages();
+      if (this.viewMode === 'continuous') {
+        // Trigger change detection and wait for DOM to update
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.renderAllPages();
+        }, 0);
+      } else {
+        this.renderCurrentPage();
+      }
     }
   }
 
@@ -189,7 +239,9 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     try {
       // Check network connectivity
       if (!navigator.onLine) {
-        this.setError('No internet connection. Please check your network and try again.');
+        this.setError(
+          'No internet connection. Please check your network and try again.'
+        );
         return;
       }
 
@@ -199,7 +251,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
         this.isExternal = false;
       } else if (isExternalUrl(this.src)) {
         this.isExternal = true;
-        this.proxiedSrc = await tryLoadWithProxy(this.src);
+        this.proxiedSrc = await tryLoadWithProxy(this.src, this.proxyUrl);
       } else {
         this.proxiedSrc = this.src;
         this.isExternal = false;
@@ -222,7 +274,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   private async loadPdfDocument(): Promise<void> {
     try {
       this.abortController = new AbortController();
-      
+
       // Set loading timeout
       this.timeoutId = window.setTimeout(() => {
         if (this.loading) {
@@ -232,17 +284,17 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
 
       const loadingTask = pdfjsLib.getDocument({
         url: this.proxiedSrc,
-        ...defaultPdfOptions
+        ...defaultPdfOptions,
       });
 
       this.pdfDocument = await loadingTask.promise;
-      
+
       // Clear timeout on successful load
       if (this.timeoutId) {
         clearTimeout(this.timeoutId);
         this.timeoutId = null;
       }
-      
+
       this.totalPages = this.pdfDocument.numPages;
       this.pages = Array.from({ length: this.totalPages }, (_, i) => i + 1);
 
@@ -259,18 +311,20 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
 
       // Render pages based on view mode
       if (this.viewMode === 'continuous') {
-        this.renderAllPages();
+        // Wait for DOM to update with canvas elements
+        setTimeout(() => {
+          this.renderAllPages();
+        }, 0);
       } else {
         this.renderCurrentPage();
       }
-
     } catch (error: any) {
       // Clear timeout on error
       if (this.timeoutId) {
         clearTimeout(this.timeoutId);
         this.timeoutId = null;
       }
-      
+
       this.setError(`Failed to load PDF document: ${error.message}`);
     }
   }
@@ -287,15 +341,13 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
 
       const page = await this.pdfDocument.getPage(this.currentPage);
       const canvas = this.pdfCanvas?.nativeElement;
-      
+
       if (!canvas) {
-        console.error('Canvas element not found');
         return;
       }
 
       const context = canvas.getContext('2d');
       if (!context) {
-        console.error('Could not get 2D context from canvas');
         return;
       }
 
@@ -329,17 +381,8 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       const renderContext = {
         canvasContext: context,
         viewport: viewport,
-        canvas: canvas
+        canvas: canvas,
       };
-
-      console.log('Rendering PDF page:', {
-        pageNumber: this.currentPage,
-        scale,
-        devicePixelRatio,
-        viewport: { width: viewport.width, height: viewport.height },
-        canvas: { width: canvas.width, height: canvas.height },
-        displaySize: { width: canvas.style.width, height: canvas.style.height }
-      });
 
       // Store the render task
       const renderTask = page.render(renderContext);
@@ -347,91 +390,83 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
 
       await renderTask.promise;
       this.loadedPages.add(this.currentPage);
-      
+
       // Remove completed task
       this.renderTasks.delete(this.currentPage);
       this.updateActivity();
-
-      console.log('PDF page rendered successfully');
-
     } catch (error: any) {
-      console.error('Error rendering PDF page:', error);
       this.errorBoundary.reportError(error, 'PDF page rendering');
     }
   }
 
+  // Internal state
+  private isRendering = false;
+
   private async renderAllPages(): Promise<void> {
-    if (!this.pdfDocument || this.loading || this.viewMode !== 'continuous') return;
+    if (!this.pdfDocument || this.loading || this.viewMode !== 'continuous')
+      return;
+    if (this.isRendering) return; // Prevent concurrent render processes
+
+    const canvasElements = this.pageCanvases ? this.pageCanvases.toArray() : [];
+    if (canvasElements.length === 0) {
+      return;
+    }
+
+    this.isRendering = true;
 
     try {
-      const canvasElements = document.querySelectorAll('.page-canvas') as NodeListOf<HTMLCanvasElement>;
       const devicePixelRatio = window.devicePixelRatio || 1;
-      
+
       // Cancel any existing render tasks
       this.cancelAllRenderTasks();
-      
-      // Render pages sequentially to avoid canvas conflicts
+
+      // Render pages sequentially
       for (let i = 0; i < this.pages.length; i++) {
         const pageNumber = i + 1;
-        const canvas = canvasElements[i];
-        
-        if (!canvas) continue;
+        const canvasRef = canvasElements[i];
+
+        if (!canvasRef) continue;
+
+        const canvas = canvasRef.nativeElement;
 
         try {
           const page = await this.pdfDocument.getPage(pageNumber);
           const context = canvas.getContext('2d');
-          
+
           if (!context) continue;
 
           const scale = this.zoom / 100;
           const viewport = page.getViewport({ scale, rotation: this.rotation });
 
-          // Set canvas dimensions with device pixel ratio
-          const scaledWidth = viewport.width * devicePixelRatio;
-          const scaledHeight = viewport.height * devicePixelRatio;
-
-          // Set canvas internal size (actual pixels)
-          canvas.width = scaledWidth;
-          canvas.height = scaledHeight;
-
-          // Set canvas display size (CSS pixels)
+          canvas.width = viewport.width * devicePixelRatio;
+          canvas.height = viewport.height * devicePixelRatio;
           canvas.style.width = viewport.width + 'px';
           canvas.style.height = viewport.height + 'px';
 
-          // Scale the context to match device pixel ratio
           context.scale(devicePixelRatio, devicePixelRatio);
-
-          // Clear the canvas before rendering
           context.clearRect(0, 0, viewport.width, viewport.height);
-
-          // Enable high-quality image rendering
-          context.imageSmoothingEnabled = true;
-          context.imageSmoothingQuality = 'high';
 
           const renderContext = {
             canvasContext: context,
             viewport: viewport,
-            canvas: canvas
+            canvas: canvas,
           };
 
-          // Store the render task
           const renderTask = page.render(renderContext);
           this.renderTasks.set(pageNumber, renderTask);
 
           await renderTask.promise;
+
           this.loadedPages.add(pageNumber);
-          this.updateActivity();
-          
-          // Remove completed task
           this.renderTasks.delete(pageNumber);
-        } catch (error) {
-          console.error(`Error rendering page ${pageNumber}:`, error);
+        } catch (error: any) {
           this.renderTasks.delete(pageNumber);
         }
       }
     } catch (error: any) {
-      console.error('Error rendering all pages:', error);
-      this.errorBoundary.reportError(error, 'PDF all pages rendering');
+      // Failed to render all pages
+    } finally {
+      this.isRendering = false;
     }
   }
 
@@ -439,7 +474,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     this.loading = false;
     this.error = message;
     this.isCorsError = message.toLowerCase().includes('cors');
-    
+
     this.ngZone.run(() => {
       this.onError.emit(message);
       this.cdr.detectChanges();
@@ -447,7 +482,6 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   retry(): void {
-    console.log('Retrying PDF load...');
     this.stopHeartbeat();
     this.initializePdf();
   }
@@ -460,8 +494,6 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     const link = document.createElement('a');
     link.href = this.src;
     link.download = this.getFileName();
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -475,13 +507,12 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   private startHeartbeat(): void {
     this.stopHeartbeat();
     this.lastActivity = Date.now();
-    
+
     this.heartbeatId = window.setInterval(() => {
       const timeSinceLastActivity = Date.now() - this.lastActivity;
-      
+
       // If no activity for 60 seconds, consider the document unresponsive
       if (timeSinceLastActivity > 60000) {
-        console.warn('PDF document appears unresponsive, attempting recovery...');
         this.retry();
       }
     }, 10000); // Check every 10 seconds
@@ -503,7 +534,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       try {
         task.cancel();
       } catch (error) {
-        console.log(`Could not cancel render task for page ${pageNumber}:`, error);
+        // Could not cancel render task
       }
     });
     this.renderTasks.clear();
@@ -512,7 +543,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   private cleanup(): void {
     // Stop heartbeat
     this.stopHeartbeat();
-    
+
     // Clear timeout
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
@@ -533,7 +564,7 @@ export class PdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       try {
         this.pdfDocument.destroy();
       } catch (error) {
-        console.warn('Error destroying PDF document:', error);
+        // Error destroying PDF document
       }
       this.pdfDocument = null;
     }

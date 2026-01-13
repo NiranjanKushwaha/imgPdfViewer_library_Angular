@@ -39,7 +39,8 @@
 .viewer-container {
   flex: 1;
   position: relative;
-  overflow: auto; /* Allow scrolling within the viewer */
+  overflow-y: auto; /* Enable vertical scrolling */
+  overflow-x: hidden; /* Prevent horizontal scrollbars if not needed */
   width: 100%;
   height: calc(100vh - 60px); /* Full height minus toolbar */
 }

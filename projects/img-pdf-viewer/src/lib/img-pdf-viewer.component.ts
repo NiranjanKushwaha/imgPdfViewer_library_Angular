@@ -12,14 +12,26 @@ import {
   ChangeDetectorRef,
   NgZone,
   Inject,
-  Optional
+  Optional,
 } from '@angular/core';
-import { NgbModal, NgbModalRef } from '@ng-bootstrap/ng-bootstrap';
 import { CommonConstant } from './Common.constant';
-import { DocumentViewerConfig, DocumentType, DocumentInfo, ViewerState } from './types';
+import { Icons } from './icons/icons.constant';
+import {
+  DocumentViewerConfig,
+  DocumentType,
+  DocumentInfo,
+  ViewerState,
+} from './types';
 import { ImgPdfViewerService } from './img-pdf-viewer.service';
 import { ErrorBoundaryService } from './error-boundary.service';
-import { detectDocumentType, detectDocumentTypeAsync, isValidUrl, enterFullscreen, exitFullscreen, isFullscreen } from './utils';
+import {
+  detectDocumentType,
+  detectDocumentTypeAsync,
+  isValidUrl,
+  enterFullscreen,
+  exitFullscreen,
+  isFullscreen,
+} from './utils';
 
 @Component({
   selector: 'ngx-imgPdf-viewer',
@@ -45,7 +57,8 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   @Output() onPageChange = new EventEmitter<number>();
 
   // ViewChild references
-  @ViewChild('containerRef', { static: false }) containerRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('containerRef', { static: false })
+  containerRef!: ElementRef<HTMLDivElement>;
 
   // Component state
   state: ViewerState = {
@@ -57,7 +70,7 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     error: null,
     fullscreen: false,
     documentInfo: null,
-    viewMode: 'single'
+    viewMode: 'single',
   };
 
   // Computed properties
@@ -66,7 +79,29 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   get detectedDocumentType(): DocumentType {
-    return this.documentType || detectDocumentType(this.effectiveDocumentUrl);
+    // 1. Explicit type override from Input
+    if (this.documentType && this.documentType !== 'unknown') {
+      return this.documentType;
+    }
+
+    // 2. Already detected type in state (from async detection)
+    if (
+      this.state.documentInfo?.type &&
+      this.state.documentInfo.type !== 'unknown'
+    ) {
+      return this.state.documentInfo.type;
+    }
+
+    // 3. Heuristic / Extension check
+    if (!this.effectiveDocumentUrl) return 'unknown';
+    const heuristicType = detectDocumentType(this.effectiveDocumentUrl);
+
+    // 4. Config fallback
+    if (heuristicType === 'unknown' && this.mergedConfig.fallbackType) {
+      return this.mergedConfig.fallbackType;
+    }
+
+    return heuristicType;
   }
 
   // Async document type detection for URLs without extensions
@@ -74,13 +109,13 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     if (this.documentType) {
       return this.documentType;
     }
-    
+
     const url = this.effectiveDocumentUrl;
     if (!url) {
       return 'unknown';
     }
-    
-    return await detectDocumentTypeAsync(url);
+
+    return await detectDocumentTypeAsync(url, this.mergedConfig.proxyUrl);
   }
 
   get mergedConfig(): DocumentViewerConfig {
@@ -101,7 +136,7 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       maxZoom: 300,
       minZoom: 50,
       viewMode: 'single',
-      modalSize: 'lg'
+      modalSize: 'lg',
     };
 
     // Merge with new API config
@@ -110,12 +145,18 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     // Merge with legacy config if present
     const legacyConfig: DocumentViewerConfig = {};
     if (this.docPreviewConfig) {
-      legacyConfig.showToolbar = this.docPreviewConfig.zoomIn !== false || this.docPreviewConfig.zoomOut !== false || this.docPreviewConfig.rotate !== false;
+      legacyConfig.showToolbar =
+        this.docPreviewConfig.zoomIn !== false ||
+        this.docPreviewConfig.zoomOut !== false ||
+        this.docPreviewConfig.rotate !== false;
       legacyConfig.showDownload = this.docPreviewConfig.download !== false;
-      legacyConfig.showZoom = this.docPreviewConfig.zoomIn !== false || this.docPreviewConfig.zoomOut !== false;
+      legacyConfig.showZoom =
+        this.docPreviewConfig.zoomIn !== false ||
+        this.docPreviewConfig.zoomOut !== false;
       legacyConfig.showRotation = this.docPreviewConfig.rotate !== false;
       legacyConfig.showFullscreen = this.docPreviewConfig.openModal !== false;
-      legacyConfig.showPagination = this.docPreviewConfig.pageIndicator !== false;
+      legacyConfig.showPagination =
+        this.docPreviewConfig.pageIndicator !== false;
       legacyConfig.height = this.docPreviewConfig.docScreenWidth || '100%';
       legacyConfig.modalSize = this.docPreviewConfig.modalSize || 'lg';
       legacyConfig.className = this.docPreviewConfig.customStyle || '';
@@ -136,7 +177,7 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       close: true,
       docScreenWidth: this.mergedConfig.width,
       modalSize: this.mergedConfig.modalSize,
-      customStyle: this.mergedConfig.customStyle || ''
+      customStyle: this.mergedConfig.customStyle || '',
     };
   }
 
@@ -149,12 +190,12 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   // Internal state
-  private modalRef: NgbModalRef | null = null;
+  isModalOpen = false;
+  icons = Icons;
   private fullscreenChangeListener?: () => void;
 
   constructor(
     private _helper: ImgPdfViewerService,
-    private modalService: NgbModal,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private errorBoundary: ErrorBoundaryService
@@ -166,14 +207,19 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if ((changes['documentUrl'] && !changes['documentUrl'].firstChange) ||
-        (changes['documentURL'] && !changes['documentURL'].firstChange)) {
+    if (
+      (changes['documentUrl'] && !changes['documentUrl'].firstChange) ||
+      (changes['documentURL'] && !changes['documentURL'].firstChange)
+    ) {
       this.initializeViewer();
     }
     if (changes['config'] && !changes['config'].firstChange) {
       this.updateConfig();
     }
-    if (changes['docPreviewConfig'] && !changes['docPreviewConfig'].firstChange) {
+    if (
+      changes['docPreviewConfig'] &&
+      !changes['docPreviewConfig'].firstChange
+    ) {
       this.updateConfig();
     }
   }
@@ -200,7 +246,7 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       zoom: this.mergedConfig.initialZoom || 100,
       rotation: 0,
       currentPage: 1,
-      viewMode: this.mergedConfig.viewMode || 'single'
+      viewMode: this.mergedConfig.viewMode || 'single',
     };
 
     // Use async document type detection for better accuracy
@@ -210,12 +256,13 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   private initializeDocumentInfo(): void {
     const documentInfo: DocumentInfo = {
       type: this.detectedDocumentType,
-      fileName: this.title || this._helper.getFileName(this.effectiveDocumentUrl)
+      fileName:
+        this.title || this._helper.getFileName(this.effectiveDocumentUrl),
     };
 
     this.state = {
       ...this.state,
-      documentInfo
+      documentInfo,
     };
 
     this.ngZone.run(() => {
@@ -227,37 +274,52 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   private async initializeDocumentInfoAsync(): Promise<void> {
     try {
       // Use async detection for better accuracy, especially for URLs without extensions
-      const detectedType = await this.getDetectedDocumentTypeAsync();
-      
+      let detectedType = await this.getDetectedDocumentTypeAsync();
+
+      // Industrial Fallback Logic:
+      // 1. If auto-detection returns unknown, check config.fallbackType
+      if (detectedType === 'unknown' && this.mergedConfig.fallbackType) {
+        detectedType = this.mergedConfig.fallbackType;
+      }
+
+      // 2. Final heuristic fallback: if still unknown but URL path looks like PDF/Image,
+      // the synchronous detectDocumentType (called inside getDetectedDocumentTypeAsync)
+      // has already tried heuristics. If it's still unknown here, we can try one last
+      // "hopeful" guess if the URL contains keywords but wasn't caught yet.
+
       const documentInfo: DocumentInfo = {
         type: detectedType,
-        fileName: this.title || this._helper.getFileName(this.effectiveDocumentUrl)
+        fileName:
+          this.title || this._helper.getFileName(this.effectiveDocumentUrl),
       };
 
       this.state = {
         ...this.state,
         documentInfo,
-        loading: false
+        loading: false,
       };
 
       this.ngZone.run(() => {
         this.onLoad.emit(documentInfo);
         this.cdr.detectChanges();
       });
-
-      console.log('Document loaded successfully:', documentInfo);
     } catch (error) {
-      console.error('Error detecting document type:', error);
       this.setError('Failed to detect document type');
     }
   }
 
   private updateConfig(): void {
     // Update state based on new config
-    if (this.mergedConfig.initialZoom && this.mergedConfig.initialZoom !== this.state.zoom) {
+    if (
+      this.mergedConfig.initialZoom &&
+      this.mergedConfig.initialZoom !== this.state.zoom
+    ) {
       this.state.zoom = this.mergedConfig.initialZoom;
     }
-    if (this.mergedConfig.viewMode && this.mergedConfig.viewMode !== this.state.viewMode) {
+    if (
+      this.mergedConfig.viewMode &&
+      this.mergedConfig.viewMode !== this.state.viewMode
+    ) {
       this.state.viewMode = this.mergedConfig.viewMode;
     }
   }
@@ -268,22 +330,42 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       this.cdr.detectChanges();
     };
 
-    document.addEventListener('fullscreenchange', this.fullscreenChangeListener);
-    document.addEventListener('webkitfullscreenchange', this.fullscreenChangeListener);
-    document.addEventListener('mozfullscreenchange', this.fullscreenChangeListener);
-    document.addEventListener('MSFullscreenChange', this.fullscreenChangeListener);
+    document.addEventListener(
+      'fullscreenchange',
+      this.fullscreenChangeListener
+    );
+    document.addEventListener(
+      'webkitfullscreenchange',
+      this.fullscreenChangeListener
+    );
+    document.addEventListener(
+      'mozfullscreenchange',
+      this.fullscreenChangeListener
+    );
+    document.addEventListener(
+      'MSFullscreenChange',
+      this.fullscreenChangeListener
+    );
   }
 
   private cleanup(): void {
     if (this.fullscreenChangeListener) {
-      document.removeEventListener('fullscreenchange', this.fullscreenChangeListener);
-      document.removeEventListener('webkitfullscreenchange', this.fullscreenChangeListener);
-      document.removeEventListener('mozfullscreenchange', this.fullscreenChangeListener);
-      document.removeEventListener('MSFullscreenChange', this.fullscreenChangeListener);
-    }
-
-    if (this.modalRef) {
-      this.modalRef.close();
+      document.removeEventListener(
+        'fullscreenchange',
+        this.fullscreenChangeListener
+      );
+      document.removeEventListener(
+        'webkitfullscreenchange',
+        this.fullscreenChangeListener
+      );
+      document.removeEventListener(
+        'mozfullscreenchange',
+        this.fullscreenChangeListener
+      );
+      document.removeEventListener(
+        'MSFullscreenChange',
+        this.fullscreenChangeListener
+      );
     }
   }
 
@@ -291,7 +373,7 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     this.state = {
       ...this.state,
       loading: false,
-      error: message
+      error: message,
     };
 
     this.ngZone.run(() => {
@@ -308,7 +390,8 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
       ...this.state,
       loading: false,
       error: null,
-      documentInfo: info
+      documentInfo: info,
+      totalPages: info.totalPages || this.state.totalPages,
     };
 
     this.ngZone.run(() => {
@@ -318,14 +401,12 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onDocumentError(error: string): void {
-    console.error('Document loading error:', error);
     this.setError(error);
-    
+
     // Auto-retry for timeout errors
     if (error.includes('timeout') || error.includes('network')) {
       setTimeout(() => {
         if (this.state.error) {
-          console.log('Auto-retrying document load...');
           this.initializeViewer();
         }
       }, 2000);
@@ -333,12 +414,18 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onZoomIn(): void {
-    const newZoom = Math.min(this.state.zoom + 25, this.mergedConfig.maxZoom || 300);
+    const newZoom = Math.min(
+      this.state.zoom + 25,
+      this.mergedConfig.maxZoom || 300
+    );
     this.updateZoom(newZoom);
   }
 
   onZoomOut(): void {
-    const newZoom = Math.max(this.state.zoom - 25, this.mergedConfig.minZoom || 50);
+    const newZoom = Math.max(
+      this.state.zoom - 25,
+      this.mergedConfig.minZoom || 50
+    );
     this.updateZoom(newZoom);
   }
 
@@ -363,9 +450,11 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   updateRotation(rotation: number): void {
-    this.state = { ...this.state, rotation };
+    // Normalize rotation to 0-360 range
+    const normalizedRotation = ((rotation % 360) + 360) % 360;
+    this.state = { ...this.state, rotation: normalizedRotation };
     this.ngZone.run(() => {
-      this.onRotationChange.emit(rotation);
+      this.onRotationChange.emit(normalizedRotation);
       this.cdr.detectChanges();
     });
   }
@@ -393,7 +482,8 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onToggleViewMode(): void {
-    const newViewMode = this.state.viewMode === 'single' ? 'continuous' : 'single';
+    const newViewMode =
+      this.state.viewMode === 'single' ? 'continuous' : 'single';
     this.state = { ...this.state, viewMode: newViewMode };
     this.cdr.detectChanges();
   }
@@ -416,16 +506,17 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
         await enterFullscreen(this.containerRef.nativeElement);
       }
     } catch (error) {
-      console.warn('Fullscreen operation failed:', error);
       this.errorBoundary.reportError(error as Error, 'Fullscreen operation');
     }
   }
 
   // Legacy methods for backward compatibility
   closeModal(): void {
-    if (this.modalRef) {
-      this.modalRef.close();
-    }
+    this.isModalOpen = false;
+  }
+
+  openModal(): void {
+    this.isModalOpen = true;
   }
 
   downloadFile(): void {
@@ -433,25 +524,25 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   upDateZoom(zoomType: string): void {
-      switch (zoomType) {
+    switch (zoomType) {
       case 'increment':
         this.onZoomIn();
         break;
-        case 'decrement':
+      case 'decrement':
         this.onZoomOut();
-          break;
-        default:
+        break;
+      default:
         this.onZoomReset();
-          break;
-      }
+        break;
     }
+  }
 
   rotateDoc(): void {
     this.onRotateRight();
   }
 
   viewInFullScreen(): void {
-    this.onFullscreen();
+    this.openModal();
   }
 
   // Legacy getters for backward compatibility
@@ -483,11 +574,11 @@ export class ImgPdfViewerComponent implements OnInit, OnDestroy, OnChanges {
     return CommonConstant.IMAGETYPE;
   }
 
-  get inputModelRef(): NgbModalRef | null {
-    return this.modalRef;
+  get inputModelRef(): any {
+    return null;
   }
 
-  set inputModelRef(value: NgbModalRef | null) {
-    this.modalRef = value;
+  set inputModelRef(value: any) {
+    // Deprecated
   }
 }
